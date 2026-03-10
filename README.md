@@ -4,7 +4,7 @@
 
 This project investigates the effects of event boundaries on memory performance using the Mnemonic Similarity Task (MST). The study examines how task boundaries and item boundaries influence recognition memory and pattern separation.
 
-**Author:** Korlapati Keerthana
+**Author:** Korlapati Keerthana, Amritha Vinod, Ahana Talukdar
 **Date:** 05/3/2026
 
 ## Experiments
