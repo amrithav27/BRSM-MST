@@ -1,0 +1,1607 @@
+---
+title: "Project Phase 1 Analysis"
+author: "Team Popcorn - Amritha, Ahana, Keerthana"
+date: "05/3/2026"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    highlight: tango
+    latex_engine: xelatex
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo       = TRUE,
+  warning    = FALSE,
+  message    = FALSE,
+  fig.width  = 8,
+  fig.height = 5,
+  fig.align  = "center",
+  dpi        = 150
+)
+
+library(tidyverse)
+library(afex)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+
+# Shared plot theme used across all figures
+theme_study <- function() {
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", size = 13, hjust = 0.5,
+                                      margin = margin(b = 6)),
+      plot.subtitle    = element_text(size = 10, hjust = 0.5, color = "grey40",
+                                      margin = margin(b = 10)),
+      axis.title       = element_text(size = 11),
+      axis.text        = element_text(size = 10),
+      strip.text       = element_text(face = "bold", size = 11),
+      legend.position  = "none",
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(color = "grey92"),
+      plot.margin      = margin(12, 12, 12, 12)
+    )
+}
+
+# Shared boundary colour palette (Non = blue, Pre = red, Post = green)
+bp_colors <- c(Non = "#4D9DE0", Pre = "#E15554", Post = "#3BB273")
+```
+
+---
+
+# Helper Functions
+
+```{r helper_functions}
+# -------------------------------------------------------
+# Normality check via Shapiro-Wilk.
+# Prints W, p, and a plain-English decision.
+# Returns the shapiro.test object invisibly.
+# -------------------------------------------------------
+check_normality <- function(x, label = "") {
+  x_clean <- x[!is.na(x)]
+
+  if (length(x_clean) < 3) {
+    cat(label, "-- too few observations for Shapiro-Wilk\n")
+    return(invisible(NULL))
+  }
+  if (length(x_clean) > 5000) {
+    x_clean <- sample(x_clean, 5000)
+    cat(label, "-- large sample: Shapiro-Wilk on random 5000 subsample\n")
+  }
+
+  sw <- shapiro.test(x_clean)
+  cat(sprintf(
+    "\nNormality | %s\n  W = %.4f  p = %.4f  --> %s\n",
+    label, sw$statistic, sw$p.value,
+    ifelse(sw$p.value < 0.05,
+           "NON-NORMAL -> use non-parametric",
+           "Normal    -> parametric appropriate")
+  ))
+  return(sw)
+}
+
+# -------------------------------------------------------
+# One-sample test: t-test if normal, Wilcoxon otherwise.
+# -------------------------------------------------------
+one_sample_test <- function(x, label = "", mu = 0) {
+  sw <- check_normality(x, label)
+  cat("  One-sample test vs mu =", mu, "\n")
+  if (!is.null(sw) && sw$p.value < 0.05) {
+    cat("  => Wilcoxon signed-rank (non-parametric)\n")
+    print(wilcox.test(x, mu = mu, exact = FALSE))
+  } else {
+    cat("  => One-sample t-test (parametric)\n")
+    print(t.test(x, mu = mu))
+  }
+}
+
+# -------------------------------------------------------
+# Two-sample test: t-test if both normal, Mann-Whitney otherwise.
+# -------------------------------------------------------
+two_sample_test <- function(x, y, label_x = "Group1", label_y = "Group2") {
+  sw_x <- check_normality(x, label_x)
+  sw_y <- check_normality(y, label_y)
+  normal_x <- is.null(sw_x) || sw_x$p.value >= 0.05
+  normal_y <- is.null(sw_y) || sw_y$p.value >= 0.05
+  cat("  Two-sample:", label_x, "vs", label_y, "\n")
+  if (normal_x && normal_y) {
+    cat("  => Independent-samples t-test (parametric)\n")
+    print(t.test(x, y))
+  } else {
+    cat("  => Mann-Whitney U (non-parametric)\n")
+    print(wilcox.test(x, y, exact = FALSE))
+  }
+}
+
+# -------------------------------------------------------
+# Shapiro-Wilk results as a formatted kable table.
+# cells_df must have columns: label, vals (list-column).
+# -------------------------------------------------------
+normality_table <- function(cells_df,
+                            caption_text = "Shapiro-Wilk Normality Results") {
+  results <- map_dfr(seq_len(nrow(cells_df)), function(i) {
+    v <- cells_df$vals[[i]]
+    v <- v[!is.na(v)]
+    if (length(v) < 3) {
+      return(tibble(Condition = cells_df$label[i],
+                    n = length(v), W = NA, p = NA, Normal = "Too few obs"))
+    }
+    sw <- shapiro.test(v)
+    tibble(
+      Condition = cells_df$label[i],
+      n         = length(v),
+      W         = round(sw$statistic, 4),
+      p         = round(sw$p.value,   4),
+      Normal    = ifelse(sw$p.value >= 0.05, "Yes", "No")
+    )
+  })
+
+  results %>%
+    kable(caption = caption_text, align = "lrrrr") %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE, font_size = 12
+    ) %>%
+    column_spec(5, bold = TRUE,
+                color = ifelse(results$Normal == "Yes", "#3BB273", "#E15554"))
+}
+
+# -------------------------------------------------------
+# Descriptive statistics table: mean, SD, SE, 95% CI.
+# -------------------------------------------------------
+summary_table <- function(df, group_vars, dv,
+                          caption_text = "Descriptive Statistics") {
+  df %>%
+    group_by(across(all_of(group_vars))) %>%
+    summarise(
+      n          = sum(!is.na(.data[[dv]])),
+      Mean       = round(mean(.data[[dv]], na.rm = TRUE), 3),
+      SD         = round(sd(.data[[dv]],   na.rm = TRUE), 3),
+      SE         = round(SD / sqrt(n), 3),
+      CI95_lower = round(Mean - 1.96 * SE, 3),
+      CI95_upper = round(Mean + 1.96 * SE, 3),
+      .groups    = "drop"
+    ) %>%
+    kable(caption = caption_text, align = "llrrrrrr") %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = FALSE, font_size = 12
+    )
+}
+
+# -------------------------------------------------------
+# Violin + boxplot + mean diamond.
+# -------------------------------------------------------
+violin_box_plot <- function(df, x_var, y_var, fill_var = x_var,
+                            title = "", subtitle = "",
+                            x_lab = x_var, y_lab = y_var,
+                            facet_var = NULL,
+                            colors = bp_colors) {
+  p <- ggplot(df, aes(x = .data[[x_var]],
+                      y = .data[[y_var]],
+                      fill = .data[[fill_var]])) +
+    geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
+    geom_boxplot(width = 0.18, fill = "white", color = "grey30",
+                 outlier.size = 1.5, outlier.alpha = 0.5) +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white", color = "grey20") +
+    scale_fill_manual(values = colors) +
+    labs(title = title, subtitle = subtitle, x = x_lab, y = y_lab) +
+    theme_study()
+
+  if (!is.null(facet_var))
+    p <- p + facet_wrap(as.formula(paste("~", facet_var)))
+
+  return(p)
+}
+
+# -------------------------------------------------------
+# Bar chart with +/- 1 SE error bars.
+# -------------------------------------------------------
+bar_se_plot <- function(df, x_var, y_var,
+                        title = "", subtitle = "",
+                        x_lab = x_var, y_lab = y_var,
+                        facet_var = NULL,
+                        colors = bp_colors) {
+  sum_df <- df %>%
+    group_by(across(all_of(c(x_var, facet_var)))) %>%
+    summarise(
+      mean_val = mean(.data[[y_var]], na.rm = TRUE),
+      se_val   = sd(.data[[y_var]],  na.rm = TRUE) / sqrt(n()),
+      .groups  = "drop"
+    )
+
+  p <- ggplot(sum_df, aes(x = .data[[x_var]],
+                           y = mean_val,
+                           fill = .data[[x_var]])) +
+    geom_col(width = 0.6, alpha = 0.85, color = "white") +
+    geom_errorbar(aes(ymin = mean_val - se_val,
+                      ymax = mean_val + se_val),
+                  width = 0.2, color = "grey30", linewidth = 0.7) +
+    scale_fill_manual(values = colors) +
+    labs(title = title, subtitle = subtitle, x = x_lab, y = y_lab) +
+    theme_study()
+
+  if (!is.null(facet_var))
+    p <- p + facet_wrap(as.formula(paste("~", facet_var)))
+
+  return(p)
+}
+
+# -------------------------------------------------------
+# Line plot of means across boundary positions.
+# -------------------------------------------------------
+boundary_line_plot <- function(df, x_var, y_var, group_var,
+                               title = "", subtitle = "",
+                               x_lab = x_var, y_lab = y_var,
+                               colors = c("#E15554", "#3BB273")) {
+  sum_df <- df %>%
+    group_by(across(all_of(c(x_var, group_var)))) %>%
+    summarise(
+      mean_val = mean(.data[[y_var]], na.rm = TRUE),
+      se_val   = sd(.data[[y_var]],  na.rm = TRUE) / sqrt(n()),
+      .groups  = "drop"
+    )
+
+  ggplot(sum_df, aes(x = .data[[x_var]],
+                     y = mean_val,
+                     color = .data[[group_var]],
+                     group = .data[[group_var]])) +
+    geom_line(linewidth = 1.1) +
+    geom_point(size = 3.5) +
+    geom_errorbar(aes(ymin = mean_val - se_val,
+                      ymax = mean_val + se_val),
+                  width = 0.15, linewidth = 0.7) +
+    scale_color_manual(values = colors) +
+    labs(title = title, subtitle = subtitle,
+         x = x_lab, y = y_lab, color = group_var) +
+    theme_study() +
+    theme(legend.position = "right")
+}
+
+# -------------------------------------------------------
+# Q-Q plot for visual normality inspection.
+# -------------------------------------------------------
+qq_plot <- function(x, label = "") {
+  tibble(vals = x) %>%
+    ggplot(aes(sample = vals)) +
+    stat_qq(color = "#4D9DE0", alpha = 0.7, size = 1.5) +
+    stat_qq_line(color = "#E15554", linewidth = 0.9) +
+    labs(title    = paste("Q-Q Plot:", label),
+         subtitle = "Points close to line indicate normality",
+         x = "Theoretical Quantiles",
+         y = "Sample Quantiles") +
+    theme_study()
+}
+
+# -------------------------------------------------------
+# Difference score violin plot (Pre-Non and Post-Non).
+# -------------------------------------------------------
+diff_score_plot <- function(diff_df, title = "") {
+  diff_df %>%
+    select(participant_id, lure_pre_diff, lure_post_diff,
+           target_pre_diff, target_post_diff) %>%
+    pivot_longer(-participant_id, names_to = "contrast", values_to = "diff") %>%
+    mutate(
+      Measure   = ifelse(str_detect(contrast, "lure"), "Lure CR", "Target Hit"),
+      Condition = ifelse(str_detect(contrast, "pre"),  "Pre - Non", "Post - Non")
+    ) %>%
+    ggplot(aes(x = Condition, y = diff, fill = Condition)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+    geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
+    geom_boxplot(width = 0.18, fill = "white", color = "grey30") +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white", color = "grey20") +
+    scale_fill_manual(
+      values = c("Pre - Non" = "#E15554", "Post - Non" = "#3BB273")
+    ) +
+    facet_wrap(~ Measure) +
+    labs(
+      title    = title,
+      subtitle = "Dashed line = 0 (no difference from baseline)",
+      x        = "Contrast",
+      y        = "Difference in Proportion Correct"
+    ) +
+    theme_study()
+}
+
+# -------------------------------------------------------
+# REC / LDI violin plot.
+# -------------------------------------------------------
+rec_ldi_plot <- function(metrics_df, rec_col, ldi_col, title = "") {
+  metrics_df %>%
+    pivot_longer(cols = c(all_of(rec_col), all_of(ldi_col)),
+                 names_to = "Metric", values_to = "Value") %>%
+    mutate(Metric = recode(Metric,
+                           !!rec_col := "REC", !!ldi_col := "LDI")) %>%
+    ggplot(aes(x = Metric, y = Value, fill = Metric)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+    geom_violin(alpha = 0.55, trim = FALSE, color = NA) +
+    geom_boxplot(width = 0.18, fill = "white", color = "grey30",
+                 outlier.size = 1.5, outlier.alpha = 0.5) +
+    stat_summary(fun = mean, geom = "point",
+                 shape = 23, size = 3, fill = "white", color = "grey20") +
+    scale_fill_manual(values = c(REC = "#4D9DE0", LDI = "#E15554")) +
+    labs(title    = title,
+         subtitle = "Dashed line = chance (0)",
+         x = "Metric", y = "Score") +
+    theme_study()
+}
+```
+
+---
+
+# Experiment 1: Both Item and Task
+
+## 1.1 Load and Clean Task Data
+
+```{r exp1_task_load}
+base_path <- "Both_item_task"
+task_path <- file.path(base_path, "both_data")
+
+task_files <- list.files(
+  path = task_path, pattern = "_MST_task_.*\\.csv$", full.names = TRUE
+)
+cat("Task files found:", length(task_files), "\n")
+
+load_task_clean <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  participant_id <- substr(basename(file_path), 1, 5)
+  if (!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if (!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN,
+           trials.key_resp_9.rt, trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id       = participant_id,
+      trial_number         = trials.thisN + 1,
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE                         ~ NA_real_
+      ),
+      event_position    = ((trial_number - 1) %% 7) + 1,
+      boundary_position = factor(case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE                ~ "Non"
+      ), levels = c("Non", "Pre", "Post")),
+      image_name = basename(image_path)
+    )
+}
+
+df_both_task <- map_dfr(task_files, load_task_clean)
+cat("Unique participants:", length(unique(df_both_task$participant_id)), "\n")
+```
+
+```{r exp1_task_count_table}
+df_both_task %>%
+  count(boundary_position, name = "Trial Count") %>%
+  kable(caption = "Exp 1 Task: Trial Counts by Boundary Position") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 1.2 Load and Clean Test Data
+
+```{r exp1_test_load}
+test_files <- list.files(
+  path = task_path, pattern = "_MST_test_.*\\.csv$", full.names = TRUE
+)
+cat("Test files found:", length(test_files), "\n")
+
+load_test_clean <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN, trials.key_resp_3.keys,
+           trials.key_resp_3.rt, position_of_stimuli, participant) %>%
+    mutate(
+      participant_id = participant,
+      trial_number   = trials.thisN + 1,
+      image_name     = basename(image_path),
+      stimulus_type  = case_when(
+        str_detect(image_name, "^Foils")   ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE                               ~ NA_character_
+      ),
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE                          ~ NA_character_
+      )
+    )
+}
+
+df_both_test <- map_dfr(test_files, load_test_clean)
+cat("Unique participants:", length(unique(df_both_test$participant_id)), "\n")
+```
+
+```{r exp1_test_response_table}
+df_both_test %>%
+  filter(!is.na(stimulus_type), !is.na(response_type)) %>%
+  count(stimulus_type, response_type) %>%
+  pivot_wider(names_from = response_type, values_from = n, values_fill = 0) %>%
+  kable(caption = "Exp 1 Test: Response Count by Stimulus Type") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 1.3 Join Stimulus Type to Encoding Data
+
+```{r exp1_join_stimulus}
+stimulus_lookup_both <- df_both_test %>%
+  filter(stimulus_type %in% c("Target", "Lure")) %>%
+  select(participant_id, image_name, stimulus_type) %>%
+  distinct()
+
+df_both_task_labeled <- df_both_task %>%
+  left_join(stimulus_lookup_both, by = c("participant_id", "image_name")) %>%
+  filter(!is.na(stimulus_type)) %>%
+  mutate(stimulus_type = factor(stimulus_type))
+
+cat("Rows with stimulus label:", nrow(df_both_task_labeled), "\n")
+```
+
+```{r exp1_cell_count_table}
+df_both_task_labeled %>%
+  count(boundary_position, stimulus_type, name = "n") %>%
+  pivot_wider(names_from = stimulus_type, values_from = n) %>%
+  kable(caption = "Exp 1: Cell Counts (Boundary x Stimulus Type) for RT Analysis") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 1.4 Normality Check: Encoding RT
+
+```{r exp1_rt_normality}
+cells_rt_both <- df_both_task_labeled %>%
+  group_by(boundary_position, stimulus_type) %>%
+  summarise(vals = list(rt), .groups = "drop") %>%
+  mutate(label = paste(boundary_position, stimulus_type, sep = " | "))
+
+normality_table(cells_rt_both,
+                "Exp 1: Shapiro-Wilk - Encoding RT by Cell")
+```
+
+```{r exp1_rt_qq, fig.height=8}
+qq_plots_both <- pmap(
+  list(cells_rt_both$vals, cells_rt_both$label),
+  function(v, lbl) qq_plot(v[!is.na(v)], lbl)
+)
+wrap_plots(qq_plots_both, ncol = 2)
+```
+
+## 1.5 Encoding RT: Descriptive Statistics
+
+```{r exp1_rt_desc_table}
+summary_table(
+  df_both_task_labeled,
+  group_vars   = c("boundary_position", "stimulus_type"),
+  dv           = "rt",
+  caption_text = "Exp 1: Encoding RT (ms) - Mean, SD, SE, 95% CI"
+)
+```
+
+## 1.6 Encoding RT: Plots
+
+```{r exp1_rt_violin}
+violin_box_plot(
+  df        = df_both_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 1: Encoding RT by Boundary Condition",
+  subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+  x_lab     = "Boundary Position",
+  y_lab     = "Reaction Time (ms)"
+)
+```
+
+```{r exp1_rt_bar}
+bar_se_plot(
+  df        = df_both_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 1: Mean Encoding RT by Boundary Condition",
+  subtitle  = "Error bars = +/- 1 SE",
+  x_lab     = "Boundary Position",
+  y_lab     = "Mean RT (ms)"
+)
+```
+
+## 1.7 Two-Way ANOVA or ART: RT ~ Boundary x Stimulus Type
+
+```{r exp1_rt_anova}
+all_normal_both_rt <- all(map_lgl(cells_rt_both$vals, function(v) {
+  v <- v[!is.na(v)]
+  if (length(v) < 3) return(TRUE)
+  shapiro.test(v)$p.value >= 0.05
+}))
+
+if (all_normal_both_rt) {
+  cat("All cells normal -> Two-way ANOVA\n\n")
+  rt_anova_both <- aov(rt ~ boundary_position * stimulus_type,
+                       data = df_both_task_labeled)
+  print(summary(rt_anova_both))
+  cat("\nTukey HSD post-hoc (boundary_position):\n")
+  print(TukeyHSD(rt_anova_both, which = "boundary_position"))
+} else {
+  cat("Non-normality detected -> Aligned Ranks Transformation ANOVA\n\n")
+  if (!requireNamespace("ARTool", quietly = TRUE))
+    install.packages("ARTool", repos = "https://cloud.r-project.org")
+  library(ARTool)
+  art_model_both <- art(
+    rt ~ boundary_position * stimulus_type + Error(participant_id),
+    data = df_both_task_labeled
+  )
+  print(anova(art_model_both))
+  cat("\nART pairwise contrasts (boundary_position):\n")
+  print(summary(art.con(art_model_both, "boundary_position",
+                        adjust = "bonferroni")))
+}
+```
+
+## 1.8 REC and LDI Metrics
+
+```{r exp1_rec_ldi}
+participant_probs_both <- df_both_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    p_old_target   = mean(stimulus_type == "Target" & response_type == "Old"),
+    p_old_foil     = mean(stimulus_type == "Foil"   & response_type == "Old"),
+    p_similar_lure = mean(stimulus_type == "Lure"   & response_type == "Similar"),
+    p_similar_foil = mean(stimulus_type == "Foil"   & response_type == "Similar"),
+    .groups = "drop"
+  )
+
+mst_metrics_both <- participant_probs_both %>%
+  mutate(REC = p_old_target - p_old_foil,
+         LDI = p_similar_lure - p_similar_foil)
+```
+
+```{r exp1_rec_ldi_participant_table}
+mst_metrics_both %>%
+  select(participant_id, REC, LDI) %>%
+  mutate(across(c(REC, LDI), ~ round(.x, 3))) %>%
+  kable(caption = "Exp 1: Per-Participant REC and LDI") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp1_rec_ldi_summary_table}
+mst_metrics_both %>%
+  summarise(
+    REC_mean = round(mean(REC), 3), REC_sd = round(sd(REC), 3),
+    LDI_mean = round(mean(LDI), 3), LDI_sd = round(sd(LDI), 3)
+  ) %>%
+  kable(caption = "Exp 1: Group-Level REC and LDI Summary") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp1_rec_ldi_plot}
+rec_ldi_plot(mst_metrics_both, "REC", "LDI",
+             "Exp 1: Distribution of REC and LDI Scores")
+```
+
+## 1.9 Memory Accuracy: Join and Compute
+
+```{r exp1_accuracy_join}
+encoding_lookup_both <- df_both_task %>%
+  select(participant_id, image_name, boundary_position)
+
+df_both_joined <- df_both_test %>%
+  left_join(encoding_lookup_both, by = c("participant_id", "image_name")) %>%
+  filter(stimulus_type %in% c("Target", "Lure")) %>%
+  mutate(
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    lure_correct = (stimulus_type == "Lure"   & response_type == "Similar"),
+    target_hit   = (stimulus_type == "Target" & response_type == "Old")
+  )
+
+boundary_perf_both <- df_both_joined %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+    lure_CR    = mean(lure_correct, na.rm = TRUE),
+    target_hit = mean(target_hit,   na.rm = TRUE),
+    .groups    = "drop"
+  )
+```
+
+## 1.10 Normality Check: Memory Accuracy
+
+```{r exp1_accuracy_normality}
+cells_lure_both <- boundary_perf_both %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(lure_CR), .groups = "drop") %>%
+  mutate(label = paste("lure_CR |", boundary_position))
+
+cells_target_both <- boundary_perf_both %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(target_hit), .groups = "drop") %>%
+  mutate(label = paste("target_hit |", boundary_position))
+
+normality_table(cells_lure_both,
+                "Exp 1: Shapiro-Wilk - Lure Correct Rejection by Boundary")
+normality_table(cells_target_both,
+                "Exp 1: Shapiro-Wilk - Target Hit Rate by Boundary")
+```
+
+## 1.11 Memory Accuracy: Descriptive Statistics
+
+```{r exp1_accuracy_desc_tables}
+summary_table(boundary_perf_both,
+              group_vars   = "boundary_position",
+              dv           = "lure_CR",
+              caption_text = "Exp 1: Lure Correct Rejection Rate by Boundary Position")
+
+summary_table(boundary_perf_both,
+              group_vars   = "boundary_position",
+              dv           = "target_hit",
+              caption_text = "Exp 1: Target Hit Rate by Boundary Position")
+```
+
+## 1.12 Memory Accuracy: Plots
+
+```{r exp1_accuracy_violin}
+boundary_perf_both %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  violin_box_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    facet_var = "measure",
+    title     = "Exp 1: Memory Accuracy by Boundary Condition",
+    subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+```{r exp1_accuracy_line}
+boundary_perf_both %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  boundary_line_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    group_var = "measure",
+    title     = "Exp 1: Memory Accuracy Trend Across Boundary Positions",
+    subtitle  = "Error bars = +/- 1 SE",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+## 1.13 Repeated Measures ANOVA
+
+```{r exp1_rm_anova}
+cat("--- RM-ANOVA: lure_CR ~ boundary_position ---\n")
+rm_lure_both <- aov_ez(id = "participant_id", dv = "lure_CR",
+                       data = boundary_perf_both, within = "boundary_position")
+print(rm_lure_both)
+
+cat("\n--- RM-ANOVA: target_hit ~ boundary_position ---\n")
+rm_target_both <- aov_ez(id = "participant_id", dv = "target_hit",
+                         data = boundary_perf_both, within = "boundary_position")
+print(rm_target_both)
+```
+
+## 1.14 One-Sample Tests: Boundary vs Baseline
+
+```{r exp1_one_sample}
+perf_wide_both <- boundary_perf_both %>%
+  pivot_wider(names_from = boundary_position,
+              values_from = c(lure_CR, target_hit))
+
+perf_diff_both <- perf_wide_both %>%
+  mutate(
+    lure_pre_diff    = lure_CR_Pre    - lure_CR_Non,
+    lure_post_diff   = lure_CR_Post   - lure_CR_Non,
+    target_pre_diff  = target_hit_Pre  - target_hit_Non,
+    target_post_diff = target_hit_Post - target_hit_Non
+  )
+
+cat("=== lure_CR: Pre - Non ===\n")
+one_sample_test(perf_diff_both$lure_pre_diff,    "lure Pre-Non (Exp1)")
+cat("\n=== lure_CR: Post - Non ===\n")
+one_sample_test(perf_diff_both$lure_post_diff,   "lure Post-Non (Exp1)")
+cat("\n=== target_hit: Pre - Non ===\n")
+one_sample_test(perf_diff_both$target_pre_diff,  "target Pre-Non (Exp1)")
+cat("\n=== target_hit: Post - Non ===\n")
+one_sample_test(perf_diff_both$target_post_diff, "target Post-Non (Exp1)")
+```
+
+```{r exp1_diff_plot}
+diff_score_plot(perf_diff_both,
+                "Exp 1: Difference Scores Relative to Non-Boundary Baseline")
+```
+
+## 1.15 Two-Sample Tests: Pre vs Post
+
+```{r exp1_two_sample}
+cat("=== lure_CR: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_both$lure_CR[boundary_perf_both$boundary_position == "Pre"],
+  boundary_perf_both$lure_CR[boundary_perf_both$boundary_position == "Post"],
+  "lure Pre (Exp1)", "lure Post (Exp1)"
+)
+cat("\n=== target_hit: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_both$target_hit[boundary_perf_both$boundary_position == "Pre"],
+  boundary_perf_both$target_hit[boundary_perf_both$boundary_position == "Post"],
+  "target Pre (Exp1)", "target Post (Exp1)"
+)
+```
+
+---
+
+# Experiment 2: Item Only
+
+## 2.1 Load and Clean Task Data
+
+```{r exp2_task_load}
+item_base_path <- "item_only"
+item_task_path <- file.path(item_base_path, "item_only_data")
+
+item_task_files <- list.files(
+  path = item_task_path, pattern = "_MST_task_.*\\.csv$", full.names = TRUE
+)
+cat("Item task files:", length(item_task_files), "\n")
+
+load_item_task <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  participant_id <- substr(basename(file_path), 1, 5)
+  if (!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if (!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN,
+           trials.key_resp_9.rt, trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id       = participant_id,
+      trial_number         = trials.thisN + 1,
+      trials.key_resp_9.rt = as.numeric(trials.key_resp_9.rt),
+      trials.key_resp_8.rt = as.numeric(trials.key_resp_8.rt),
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE                         ~ NA_real_
+      ),
+      event_position    = ((trial_number - 1) %% 7) + 1,
+      boundary_position = factor(case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE                ~ "Non"
+      ), levels = c("Non", "Pre", "Post")),
+      image_name = basename(image_path)
+    )
+}
+
+df_item_task <- map_dfr(item_task_files, load_item_task)
+cat("Unique participants:", length(unique(df_item_task$participant_id)), "\n")
+```
+
+```{r exp2_task_count_table}
+df_item_task %>%
+  count(boundary_position, name = "Trial Count") %>%
+  kable(caption = "Exp 2 Task: Trial Counts by Boundary Position") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 2.2 Load and Clean Test Data
+
+```{r exp2_test_load}
+item_test_files <- list.files(
+  path = item_task_path, pattern = "_MST_test_.*\\.csv$", full.names = TRUE
+)
+cat("Item test files:", length(item_test_files), "\n")
+
+load_item_test <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN, trials.key_resp_3.keys,
+           trials.key_resp_3.rt, position_of_stimuli, participant) %>%
+    mutate(
+      participant_id = participant,
+      trial_number   = trials.thisN + 1,
+      image_name     = basename(image_path),
+      stimulus_type  = case_when(
+        str_detect(image_name, "^Foils")   ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE                               ~ NA_character_
+      ),
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE                          ~ NA_character_
+      )
+    )
+}
+
+df_item_test <- map_dfr(item_test_files, load_item_test)
+cat("Unique participants:", length(unique(df_item_test$participant_id)), "\n")
+```
+
+```{r exp2_test_response_table}
+df_item_test %>%
+  filter(!is.na(stimulus_type), !is.na(response_type)) %>%
+  count(stimulus_type, response_type) %>%
+  pivot_wider(names_from = response_type, values_from = n, values_fill = 0) %>%
+  kable(caption = "Exp 2 Test: Response Count by Stimulus Type") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 2.3 Join Stimulus Type to Encoding Data
+
+```{r exp2_join_stimulus}
+stimulus_lookup_item <- df_item_test %>%
+  filter(stimulus_type %in% c("Target", "Lure")) %>%
+  select(participant_id, image_name, stimulus_type) %>%
+  distinct()
+
+df_item_task_labeled <- df_item_task %>%
+  left_join(stimulus_lookup_item, by = c("participant_id", "image_name")) %>%
+  filter(!is.na(stimulus_type)) %>%
+  mutate(stimulus_type = factor(stimulus_type))
+
+cat("Rows with label:", nrow(df_item_task_labeled), "\n")
+```
+
+```{r exp2_cell_count_table}
+df_item_task_labeled %>%
+  count(boundary_position, stimulus_type, name = "n") %>%
+  pivot_wider(names_from = stimulus_type, values_from = n) %>%
+  kable(caption = "Exp 2: Cell Counts (Boundary x Stimulus Type) for RT Analysis") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 2.4 Normality Check: Encoding RT
+
+```{r exp2_rt_normality}
+cells_rt_item <- df_item_task_labeled %>%
+  group_by(boundary_position, stimulus_type) %>%
+  summarise(vals = list(rt), .groups = "drop") %>%
+  mutate(label = paste(boundary_position, stimulus_type, sep = " | "))
+
+normality_table(cells_rt_item,
+                "Exp 2: Shapiro-Wilk - Encoding RT by Cell")
+```
+
+```{r exp2_rt_qq, fig.height=8}
+qq_plots_item <- pmap(
+  list(cells_rt_item$vals, cells_rt_item$label),
+  function(v, lbl) qq_plot(v[!is.na(v)], lbl)
+)
+wrap_plots(qq_plots_item, ncol = 2)
+```
+
+## 2.5 Encoding RT: Descriptive Statistics
+
+```{r exp2_rt_desc_table}
+summary_table(
+  df_item_task_labeled,
+  group_vars   = c("boundary_position", "stimulus_type"),
+  dv           = "rt",
+  caption_text = "Exp 2: Encoding RT (ms) - Mean, SD, SE, 95% CI"
+)
+```
+
+## 2.6 Encoding RT: Plots
+
+```{r exp2_rt_violin}
+violin_box_plot(
+  df        = df_item_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 2: Encoding RT by Boundary Condition",
+  subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+  x_lab     = "Boundary Position",
+  y_lab     = "Reaction Time (ms)"
+)
+```
+
+```{r exp2_rt_bar}
+bar_se_plot(
+  df        = df_item_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 2: Mean Encoding RT by Boundary Condition",
+  subtitle  = "Error bars = +/- 1 SE",
+  x_lab     = "Boundary Position",
+  y_lab     = "Mean RT (ms)"
+)
+```
+
+## 2.7 Two-Way ANOVA or ART: RT ~ Boundary x Stimulus Type
+
+```{r exp2_rt_anova}
+all_normal_item_rt <- all(map_lgl(cells_rt_item$vals, function(v) {
+  v <- v[!is.na(v)]
+  if (length(v) < 3) return(TRUE)
+  shapiro.test(v)$p.value >= 0.05
+}))
+
+if (all_normal_item_rt) {
+  cat("All cells normal -> Two-way ANOVA\n\n")
+  rt_anova_item <- aov(rt ~ boundary_position * stimulus_type,
+                       data = df_item_task_labeled)
+  print(summary(rt_anova_item))
+  cat("\nTukey HSD post-hoc (boundary_position):\n")
+  print(TukeyHSD(rt_anova_item, which = "boundary_position"))
+} else {
+  cat("Non-normality detected -> ART ANOVA\n\n")
+  if (!requireNamespace("ARTool", quietly = TRUE))
+    install.packages("ARTool", repos = "https://cloud.r-project.org")
+  library(ARTool)
+  art_model_item <- art(
+    rt ~ boundary_position * stimulus_type + Error(participant_id),
+    data = df_item_task_labeled
+  )
+  print(anova(art_model_item))
+  cat("\nART pairwise contrasts:\n")
+  print(summary(art.con(art_model_item, "boundary_position",
+                        adjust = "bonferroni")))
+}
+```
+
+## 2.8 REC and LDI Metrics
+
+```{r exp2_rec_ldi}
+participant_probs_item <- df_item_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    p_old_target   = mean(stimulus_type == "Target" & response_type == "Old"),
+    p_old_foil     = mean(stimulus_type == "Foil"   & response_type == "Old"),
+    p_similar_lure = mean(stimulus_type == "Lure"   & response_type == "Similar"),
+    p_similar_foil = mean(stimulus_type == "Foil"   & response_type == "Similar"),
+    .groups = "drop"
+  )
+
+mst_metrics_item <- participant_probs_item %>%
+  mutate(REC_item = p_old_target - p_old_foil,
+         LDI_item = p_similar_lure - p_similar_foil)
+```
+
+```{r exp2_rec_ldi_participant_table}
+mst_metrics_item %>%
+  select(participant_id, REC_item, LDI_item) %>%
+  mutate(across(c(REC_item, LDI_item), ~ round(.x, 3))) %>%
+  kable(caption = "Exp 2: Per-Participant REC and LDI") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp2_rec_ldi_summary_table}
+mst_metrics_item %>%
+  summarise(
+    REC_mean = round(mean(REC_item), 3), REC_sd = round(sd(REC_item), 3),
+    LDI_mean = round(mean(LDI_item), 3), LDI_sd = round(sd(LDI_item), 3)
+  ) %>%
+  kable(caption = "Exp 2: Group-Level REC and LDI Summary") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp2_rec_ldi_plot}
+rec_ldi_plot(mst_metrics_item, "REC_item", "LDI_item",
+             "Exp 2: Distribution of REC and LDI Scores")
+```
+
+## 2.9 Memory Accuracy: Join and Compute
+
+```{r exp2_accuracy_join}
+encoding_lookup_item <- df_item_task %>%
+  select(participant_id, image_name, boundary_position)
+
+df_item_joined <- df_item_test %>%
+  left_join(encoding_lookup_item,
+            by = c("participant_id", "image_name"),
+            relationship = "many-to-many") %>%
+  mutate(
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    lure_correct = (stimulus_type == "Lure"   & response_type == "Similar"),
+    target_hit   = (stimulus_type == "Target" & response_type == "Old")
+  )
+
+boundary_perf_item <- df_item_joined %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+    lure_CR    = mean(lure_correct, na.rm = TRUE),
+    target_hit = mean(target_hit,   na.rm = TRUE),
+    .groups    = "drop"
+  )
+```
+
+## 2.10 Normality Check: Memory Accuracy
+
+```{r exp2_accuracy_normality}
+cells_lure_item <- boundary_perf_item %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(lure_CR), .groups = "drop") %>%
+  mutate(label = paste("lure_CR |", boundary_position))
+
+cells_target_item <- boundary_perf_item %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(target_hit), .groups = "drop") %>%
+  mutate(label = paste("target_hit |", boundary_position))
+
+normality_table(cells_lure_item,
+                "Exp 2: Shapiro-Wilk - Lure Correct Rejection by Boundary")
+normality_table(cells_target_item,
+                "Exp 2: Shapiro-Wilk - Target Hit Rate by Boundary")
+```
+
+## 2.11 Memory Accuracy: Descriptive Statistics
+
+```{r exp2_accuracy_desc_tables}
+summary_table(boundary_perf_item,
+              group_vars   = "boundary_position",
+              dv           = "lure_CR",
+              caption_text = "Exp 2: Lure Correct Rejection Rate by Boundary Position")
+
+summary_table(boundary_perf_item,
+              group_vars   = "boundary_position",
+              dv           = "target_hit",
+              caption_text = "Exp 2: Target Hit Rate by Boundary Position")
+```
+
+## 2.12 Memory Accuracy: Plots
+
+```{r exp2_accuracy_violin}
+boundary_perf_item %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  violin_box_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    facet_var = "measure",
+    title     = "Exp 2: Memory Accuracy by Boundary Condition",
+    subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+```{r exp2_accuracy_line}
+boundary_perf_item %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  boundary_line_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    group_var = "measure",
+    title     = "Exp 2: Memory Accuracy Trend Across Boundary Positions",
+    subtitle  = "Error bars = +/- 1 SE",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+## 2.13 Repeated Measures ANOVA
+
+```{r exp2_rm_anova}
+cat("--- RM-ANOVA: lure_CR ~ boundary_position ---\n")
+rm_lure_item <- aov_ez(id = "participant_id", dv = "lure_CR",
+                       data = boundary_perf_item, within = "boundary_position")
+print(rm_lure_item)
+
+cat("\n--- RM-ANOVA: target_hit ~ boundary_position ---\n")
+rm_target_item <- aov_ez(id = "participant_id", dv = "target_hit",
+                         data = boundary_perf_item, within = "boundary_position")
+print(rm_target_item)
+```
+
+## 2.14 One-Sample Tests: Boundary vs Baseline
+
+```{r exp2_one_sample}
+perf_wide_item <- boundary_perf_item %>%
+  pivot_wider(names_from = boundary_position,
+              values_from = c(lure_CR, target_hit))
+
+perf_diff_item <- perf_wide_item %>%
+  mutate(
+    lure_pre_diff    = lure_CR_Pre    - lure_CR_Non,
+    lure_post_diff   = lure_CR_Post   - lure_CR_Non,
+    target_pre_diff  = target_hit_Pre  - target_hit_Non,
+    target_post_diff = target_hit_Post - target_hit_Non
+  )
+
+cat("=== lure_CR: Pre - Non ===\n")
+one_sample_test(perf_diff_item$lure_pre_diff,    "lure Pre-Non (Exp2)")
+cat("\n=== lure_CR: Post - Non ===\n")
+one_sample_test(perf_diff_item$lure_post_diff,   "lure Post-Non (Exp2)")
+cat("\n=== target_hit: Pre - Non ===\n")
+one_sample_test(perf_diff_item$target_pre_diff,  "target Pre-Non (Exp2)")
+cat("\n=== target_hit: Post - Non ===\n")
+one_sample_test(perf_diff_item$target_post_diff, "target Post-Non (Exp2)")
+```
+
+```{r exp2_diff_plot}
+diff_score_plot(perf_diff_item,
+                "Exp 2: Difference Scores Relative to Non-Boundary Baseline")
+```
+
+## 2.15 Two-Sample Tests: Pre vs Post
+
+```{r exp2_two_sample}
+cat("=== lure_CR: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_item$lure_CR[boundary_perf_item$boundary_position == "Pre"],
+  boundary_perf_item$lure_CR[boundary_perf_item$boundary_position == "Post"],
+  "lure Pre (Exp2)", "lure Post (Exp2)"
+)
+cat("\n=== target_hit: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_item$target_hit[boundary_perf_item$boundary_position == "Pre"],
+  boundary_perf_item$target_hit[boundary_perf_item$boundary_position == "Post"],
+  "target Pre (Exp2)", "target Post (Exp2)"
+)
+```
+
+---
+
+# Experiment 3: Task Only
+
+## 3.1 Load and Clean Task Data
+
+```{r exp3_task_load}
+task_only_base <- "task_only"
+task_only_path <- file.path(task_only_base, "task_only_data")
+
+task_only_task_files <- list.files(
+  path = task_only_path, pattern = "task.*\\.csv$", full.names = TRUE
+)
+cat("Task-only task files:", length(task_only_task_files), "\n")
+
+load_task_only_task <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  participant_id <- substr(basename(file_path), 1, 5)
+  if (!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if (!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN,
+           trials.key_resp_9.rt, trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id       = participant_id,
+      trial_number         = trials.thisN + 1,
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE                         ~ NA_real_
+      ),
+      event_position    = ((trial_number - 1) %% 7) + 1,
+      boundary_position = factor(case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE                ~ "Non"
+      ), levels = c("Non", "Pre", "Post")),
+      image_name = basename(image_path)
+    )
+}
+
+df_task_task <- map_dfr(task_only_task_files, load_task_only_task)
+cat("Unique participants:", length(unique(df_task_task$participant_id)), "\n")
+```
+
+```{r exp3_task_count_table}
+df_task_task %>%
+  count(boundary_position, name = "Trial Count") %>%
+  kable(caption = "Exp 3 Task: Trial Counts by Boundary Position") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 3.2 Load and Clean Test Data
+
+```{r exp3_test_load}
+task_only_test_files <- list.files(
+  path = task_only_path, pattern = "test.*\\.csv$", full.names = TRUE
+)
+cat("Task-only test files:", length(task_only_test_files), "\n")
+
+load_task_only_test <- function(file_path) {
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path, trials.thisN, trials.key_resp_3.keys,
+           trials.key_resp_3.rt, position_of_stimuli, participant) %>%
+    mutate(
+      participant_id = participant,
+      trial_number   = trials.thisN + 1,
+      image_name     = basename(image_path),
+      stimulus_type  = case_when(
+        str_detect(image_name, "^Foils")   ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE                               ~ NA_character_
+      ),
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE                          ~ NA_character_
+      )
+    )
+}
+
+df_task_test <- map_dfr(task_only_test_files, load_task_only_test)
+cat("Unique participants:", length(unique(df_task_test$participant_id)), "\n")
+```
+
+```{r exp3_test_response_table}
+df_task_test %>%
+  filter(!is.na(stimulus_type), !is.na(response_type)) %>%
+  count(stimulus_type, response_type) %>%
+  pivot_wider(names_from = response_type, values_from = n, values_fill = 0) %>%
+  kable(caption = "Exp 3 Test: Response Count by Stimulus Type") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 3.3 Join Stimulus Type to Encoding Data
+
+```{r exp3_join_stimulus}
+stimulus_lookup_task <- df_task_test %>%
+  filter(stimulus_type %in% c("Target", "Lure")) %>%
+  select(participant_id, image_name, stimulus_type) %>%
+  distinct()
+
+df_task_task_labeled <- df_task_task %>%
+  left_join(stimulus_lookup_task, by = c("participant_id", "image_name")) %>%
+  filter(!is.na(stimulus_type)) %>%
+  mutate(stimulus_type = factor(stimulus_type))
+
+cat("Rows with label:", nrow(df_task_task_labeled), "\n")
+```
+
+```{r exp3_cell_count_table}
+df_task_task_labeled %>%
+  count(boundary_position, stimulus_type, name = "n") %>%
+  pivot_wider(names_from = stimulus_type, values_from = n) %>%
+  kable(caption = "Exp 3: Cell Counts (Boundary x Stimulus Type) for RT Analysis") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+## 3.4 Normality Check: Encoding RT
+
+```{r exp3_rt_normality}
+cells_rt_task <- df_task_task_labeled %>%
+  group_by(boundary_position, stimulus_type) %>%
+  summarise(vals = list(rt), .groups = "drop") %>%
+  mutate(label = paste(boundary_position, stimulus_type, sep = " | "))
+
+normality_table(cells_rt_task,
+                "Exp 3: Shapiro-Wilk - Encoding RT by Cell")
+```
+
+```{r exp3_rt_qq, fig.height=8}
+qq_plots_task <- pmap(
+  list(cells_rt_task$vals, cells_rt_task$label),
+  function(v, lbl) qq_plot(v[!is.na(v)], lbl)
+)
+wrap_plots(qq_plots_task, ncol = 2)
+```
+
+## 3.5 Encoding RT: Descriptive Statistics
+
+```{r exp3_rt_desc_table}
+summary_table(
+  df_task_task_labeled,
+  group_vars   = c("boundary_position", "stimulus_type"),
+  dv           = "rt",
+  caption_text = "Exp 3: Encoding RT (ms) - Mean, SD, SE, 95% CI"
+)
+```
+
+## 3.6 Encoding RT: Plots
+
+```{r exp3_rt_violin}
+violin_box_plot(
+  df        = df_task_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 3: Encoding RT by Boundary Condition",
+  subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+  x_lab     = "Boundary Position",
+  y_lab     = "Reaction Time (ms)"
+)
+```
+
+```{r exp3_rt_bar}
+bar_se_plot(
+  df        = df_task_task_labeled,
+  x_var     = "boundary_position",
+  y_var     = "rt",
+  facet_var = "stimulus_type",
+  title     = "Exp 3: Mean Encoding RT by Boundary Condition",
+  subtitle  = "Error bars = +/- 1 SE",
+  x_lab     = "Boundary Position",
+  y_lab     = "Mean RT (ms)"
+)
+```
+
+## 3.7 Two-Way ANOVA or ART: RT ~ Boundary x Stimulus Type
+
+```{r exp3_rt_anova}
+all_normal_task_rt <- all(map_lgl(cells_rt_task$vals, function(v) {
+  v <- v[!is.na(v)]
+  if (length(v) < 3) return(TRUE)
+  shapiro.test(v)$p.value >= 0.05
+}))
+
+if (all_normal_task_rt) {
+  cat("All cells normal -> Two-way ANOVA\n\n")
+  rt_anova_task <- aov(rt ~ boundary_position * stimulus_type,
+                       data = df_task_task_labeled)
+  print(summary(rt_anova_task))
+  cat("\nTukey HSD post-hoc (boundary_position):\n")
+  print(TukeyHSD(rt_anova_task, which = "boundary_position"))
+} else {
+  cat("Non-normality detected -> ART ANOVA\n\n")
+  if (!requireNamespace("ARTool", quietly = TRUE))
+    install.packages("ARTool", repos = "https://cloud.r-project.org")
+  library(ARTool)
+  art_model_task <- art(
+    rt ~ boundary_position * stimulus_type + Error(participant_id),
+    data = df_task_task_labeled
+  )
+  print(anova(art_model_task))
+  cat("\nART pairwise contrasts:\n")
+  print(summary(art.con(art_model_task, "boundary_position",
+                        adjust = "bonferroni")))
+}
+```
+
+## 3.8 REC and LDI Metrics
+
+```{r exp3_rec_ldi}
+participant_probs_task <- df_task_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    p_old_target   = mean(stimulus_type == "Target" & response_type == "Old"),
+    p_old_foil     = mean(stimulus_type == "Foil"   & response_type == "Old"),
+    p_similar_lure = mean(stimulus_type == "Lure"   & response_type == "Similar"),
+    p_similar_foil = mean(stimulus_type == "Foil"   & response_type == "Similar"),
+    .groups = "drop"
+  )
+
+mst_metrics_task <- participant_probs_task %>%
+  mutate(REC_task = p_old_target - p_old_foil,
+         LDI_task = p_similar_lure - p_similar_foil)
+```
+
+```{r exp3_rec_ldi_participant_table}
+mst_metrics_task %>%
+  select(participant_id, REC_task, LDI_task) %>%
+  mutate(across(c(REC_task, LDI_task), ~ round(.x, 3))) %>%
+  kable(caption = "Exp 3: Per-Participant REC and LDI") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp3_rec_ldi_summary_table}
+mst_metrics_task %>%
+  summarise(
+    REC_mean = round(mean(REC_task), 3), REC_sd = round(sd(REC_task), 3),
+    LDI_mean = round(mean(LDI_task), 3), LDI_sd = round(sd(LDI_task), 3)
+  ) %>%
+  kable(caption = "Exp 3: Group-Level REC and LDI Summary") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE, font_size = 12)
+```
+
+```{r exp3_rec_ldi_plot}
+rec_ldi_plot(mst_metrics_task, "REC_task", "LDI_task",
+             "Exp 3: Distribution of REC and LDI Scores")
+```
+
+## 3.9 Memory Accuracy: Join and Compute
+
+```{r exp3_accuracy_join}
+encoding_lookup_task <- df_task_task %>%
+  select(participant_id, image_name, boundary_position)
+
+df_task_joined <- df_task_test %>%
+  left_join(encoding_lookup_task,
+            by = c("participant_id", "image_name"),
+            relationship = "many-to-many") %>%
+  mutate(
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    lure_correct = (stimulus_type == "Lure"   & response_type == "Similar"),
+    target_hit   = (stimulus_type == "Target" & response_type == "Old")
+  )
+
+boundary_perf_task <- df_task_joined %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+    lure_CR    = mean(lure_correct, na.rm = TRUE),
+    target_hit = mean(target_hit,   na.rm = TRUE),
+    .groups    = "drop"
+  )
+```
+
+## 3.10 Normality Check: Memory Accuracy
+
+```{r exp3_accuracy_normality}
+cells_lure_task <- boundary_perf_task %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(lure_CR), .groups = "drop") %>%
+  mutate(label = paste("lure_CR |", boundary_position))
+
+cells_target_task <- boundary_perf_task %>%
+  group_by(boundary_position) %>%
+  summarise(vals = list(target_hit), .groups = "drop") %>%
+  mutate(label = paste("target_hit |", boundary_position))
+
+normality_table(cells_lure_task,
+                "Exp 3: Shapiro-Wilk - Lure Correct Rejection by Boundary")
+normality_table(cells_target_task,
+                "Exp 3: Shapiro-Wilk - Target Hit Rate by Boundary")
+```
+
+## 3.11 Memory Accuracy: Descriptive Statistics
+
+```{r exp3_accuracy_desc_tables}
+summary_table(boundary_perf_task,
+              group_vars   = "boundary_position",
+              dv           = "lure_CR",
+              caption_text = "Exp 3: Lure Correct Rejection Rate by Boundary Position")
+
+summary_table(boundary_perf_task,
+              group_vars   = "boundary_position",
+              dv           = "target_hit",
+              caption_text = "Exp 3: Target Hit Rate by Boundary Position")
+```
+
+## 3.12 Memory Accuracy: Plots
+
+```{r exp3_accuracy_violin}
+boundary_perf_task %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  violin_box_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    facet_var = "measure",
+    title     = "Exp 3: Memory Accuracy by Boundary Condition",
+    subtitle  = "Diamond = group mean | Box = IQR | Violin = distribution",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+```{r exp3_accuracy_line}
+boundary_perf_task %>%
+  pivot_longer(cols = c(lure_CR, target_hit),
+               names_to = "measure", values_to = "accuracy") %>%
+  mutate(measure = recode(measure,
+                          lure_CR    = "Lure Correct Rejection",
+                          target_hit = "Target Hit")) %>%
+  boundary_line_plot(
+    x_var     = "boundary_position",
+    y_var     = "accuracy",
+    group_var = "measure",
+    title     = "Exp 3: Memory Accuracy Trend Across Boundary Positions",
+    subtitle  = "Error bars = +/- 1 SE",
+    x_lab     = "Boundary Position",
+    y_lab     = "Proportion Correct"
+  )
+```
+
+## 3.13 Repeated Measures ANOVA
+
+```{r exp3_rm_anova}
+cat("--- RM-ANOVA: lure_CR ~ boundary_position ---\n")
+rm_lure_task <- aov_ez(id = "participant_id", dv = "lure_CR",
+                       data = boundary_perf_task, within = "boundary_position")
+print(rm_lure_task)
+
+cat("\n--- RM-ANOVA: target_hit ~ boundary_position ---\n")
+rm_target_task <- aov_ez(id = "participant_id", dv = "target_hit",
+                         data = boundary_perf_task, within = "boundary_position")
+print(rm_target_task)
+```
+
+## 3.14 One-Sample Tests: Boundary vs Baseline
+
+```{r exp3_one_sample}
+perf_wide_task <- boundary_perf_task %>%
+  pivot_wider(names_from = boundary_position,
+              values_from = c(lure_CR, target_hit))
+
+perf_diff_task <- perf_wide_task %>%
+  mutate(
+    lure_pre_diff    = lure_CR_Pre    - lure_CR_Non,
+    lure_post_diff   = lure_CR_Post   - lure_CR_Non,
+    target_pre_diff  = target_hit_Pre  - target_hit_Non,
+    target_post_diff = target_hit_Post - target_hit_Non
+  )
+
+cat("=== lure_CR: Pre - Non ===\n")
+one_sample_test(perf_diff_task$lure_pre_diff,    "lure Pre-Non (Exp3)")
+cat("\n=== lure_CR: Post - Non ===\n")
+one_sample_test(perf_diff_task$lure_post_diff,   "lure Post-Non (Exp3)")
+cat("\n=== target_hit: Pre - Non ===\n")
+one_sample_test(perf_diff_task$target_pre_diff,  "target Pre-Non (Exp3)")
+cat("\n=== target_hit: Post - Non ===\n")
+one_sample_test(perf_diff_task$target_post_diff, "target Post-Non (Exp3)")
+```
+
+```{r exp3_diff_plot}
+diff_score_plot(perf_diff_task,
+                "Exp 3: Difference Scores Relative to Non-Boundary Baseline")
+```
+
+## 3.15 Two-Sample Tests: Pre vs Post
+
+```{r exp3_two_sample}
+cat("=== lure_CR: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_task$lure_CR[boundary_perf_task$boundary_position == "Pre"],
+  boundary_perf_task$lure_CR[boundary_perf_task$boundary_position == "Post"],
+  "lure Pre (Exp3)", "lure Post (Exp3)"
+)
+cat("\n=== target_hit: Pre vs Post ===\n")
+two_sample_test(
+  boundary_perf_task$target_hit[boundary_perf_task$boundary_position == "Pre"],
+  boundary_perf_task$target_hit[boundary_perf_task$boundary_position == "Post"],
+  "target Pre (Exp3)", "target Post (Exp3)"
+)
+```
