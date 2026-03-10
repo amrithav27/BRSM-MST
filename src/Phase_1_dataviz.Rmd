@@ -1,0 +1,1203 @@
+---
+title: "Project Phase 1"
+author: "Korlapati Keerthana"
+date: "05/3/2026"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+### Experiment 1: Both Item and Task
+
+```{r}
+# Both Task and Item- Task
+library(tidyverse)
+
+# SET PATH
+base_path <- "Both_item_task"
+
+task_path <- file.path(base_path, "both_data")
+
+# FIND TASK FILES
+task_files <- list.files(
+  path = task_path,
+  pattern = "_MST_task_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TASK files found:", length(task_files), "\n")
+
+# LOAD + CLEAN FUNCTION
+load_task_clean <- function(file_path) {
+  
+  df <- suppressMessages(
+    read_csv(
+      file_path,
+      show_col_types = FALSE,
+      name_repair = "unique"
+    )
+  )
+  
+  participant_id <- substr(basename(file_path), 1, 5)
+  
+  # Create missing columns if they don't exist
+  if(!"trials.key_resp_9.rt" %in% names(df)) {
+    df$trials.key_resp_9.rt <- NA
+  }
+  
+  if(!"trials.key_resp_8.rt" %in% names(df)) {
+    df$trials.key_resp_8.rt <- NA
+  }
+  
+  df_clean <- df %>%
+    
+    filter(!is.na(trials.thisN)) %>%
+    
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_9.rt,
+      trials.key_resp_8.rt
+    ) %>%
+    
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+      
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+      
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+      
+      event_position = ((trial_number - 1) %% 7) + 1,
+      
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+      
+      image_name = basename(image_path)
+    )
+  
+  return(df_clean)
+}
+
+# APPLY TO ALL FILES
+df_both_task <- map_dfr(task_files, load_task_clean)
+
+# SANITY CHECKS
+cat("Unique participants:", length(unique(df_both_task$participant_id)), "\n")
+table(df_both_task$boundary_position)
+summary(df_both_task$rt)
+```
+
+```{r}
+names(df_both_task)
+```
+
+```{r}
+library(tidyverse)
+
+# Both Task and Item- Test
+test_files <- list.files(
+  path = task_path,
+  pattern = "_MST_test_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TEST files found:", length(test_files), "\n")
+
+# LOAD + CLEAN FUNCTION
+load_test_clean <- function(file_path) {
+
+  df <- suppressMessages(
+    read_csv(file_path,
+             show_col_types = FALSE,
+             name_repair = "unique")
+  )
+
+  df_clean <- df %>%
+    
+    # keep only actual test trials
+    filter(!is.na(trials.thisN)) %>%
+    
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name, "^Foils") ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+
+  return(df_clean)
+}
+
+# APPLY TO ALL FILES
+df_both_test <- map_dfr(test_files, load_test_clean)
+
+# CHECK
+cat("Unique participants:", length(unique(df_both_test$participant_id)), "\n")
+table(df_both_test$stimulus_type)
+```
+
+```{r}
+names(df_both_test)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# Response distribution
+############################################
+
+p <- ggplot(df_both_test, aes(x = response_type)) +
+  geom_bar(fill = "darkorange") +
+  labs(
+    title = "Distribution of Responses",
+    x = "Response Type",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("both_Distribution_of_Responses.png", plot = p, width = 8, height = 5)
+
+############################################
+# Stimulus x Response confusion plot
+############################################
+
+p <- ggplot(df_both_test, aes(x = stimulus_type, fill = response_type)) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Type",
+    x = "Stimulus Type",
+    y = "Count",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("both_Responses_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time distribution
+############################################
+
+p <- ggplot(df_both_test, aes(x = trials.key_resp_3.rt)) +
+  geom_histogram(bins = 40, fill = "purple", alpha = 0.7) +
+  labs(
+    title = "Reaction Time Distribution",
+    x = "Reaction Time (seconds)",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("both_Reaction_Time_Distribution.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time by stimulus type
+############################################
+
+p <- ggplot(df_both_test,
+       aes(x = stimulus_type, y = trials.key_resp_3.rt, fill = stimulus_type)) +
+  geom_violin(trim = FALSE, alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time Distribution by Stimulus Type",
+    x = "Stimulus Type",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("both_Reaction_Time_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Position vs Response Type
+############################################
+
+p <- ggplot(df_both_test,
+       aes(x = factor( response_type), fill = position_of_stimuli)) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Position",
+    x = "Response",
+    y = "Count",
+    fill = " Stimulus Position"
+  ) +
+  theme_minimal()
+p
+ggsave("both_Responses_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction Time by Stimulus Position
+############################################
+
+p <- ggplot(df_both_test,
+       aes(x = factor(position_of_stimuli),
+           y = trials.key_resp_3.rt,
+           fill = factor(position_of_stimuli))) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Stimulus Position",
+    x = "Stimulus Position",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("both_Reaction_Time_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Lure Position vs Response
+############################################
+
+p <- ggplot(df_both_test %>% filter(stimulus_type == "Lure"),
+       aes(x = factor(position_of_stimuli), fill = response_type)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Lure Responses by Similarity Position",
+    x = "Lure Position",
+    y = "Proportion",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("both_Lure_Responses_by_Similarity_Position.png", plot = p, width = 8, height = 5)
+
+###########################################
+# Reaction time vs response type
+###########################################
+p <- ggplot(df_both_test,
+       aes(x = response_type, y = trials.key_resp_3.rt, fill = response_type)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Response Type",
+    x = "Response",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("both_Reaction_Time_by_Response_Type.png", plot = p, width = 8, height = 5)
+
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# 1. Compute response probabilities per participant
+############################################
+
+participant_probs_both <- df_both_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    
+    # Target responses
+    p_old_target = mean(stimulus_type == "Target" & response_type == "Old"),
+    
+    # Lure responses
+    p_similar_lure = mean(stimulus_type == "Lure" & response_type == "Similar"),
+    
+    # Foil responses
+    p_old_foil = mean(stimulus_type == "Foil" & response_type == "Old"),
+    p_similar_foil = mean(stimulus_type == "Foil" & response_type == "Similar"),
+    
+    .groups = "drop"
+  )
+
+############################################
+# 2. Compute MST metrics for BOTH dataset
+############################################
+
+mst_metrics_both <- participant_probs_both %>%
+  mutate(
+    
+    # Recognition score
+    REC_both = p_old_target - p_old_foil,
+    
+    # Lure Discrimination Index
+    LDI_both = p_similar_lure - p_similar_foil
+  ) %>%
+  select(participant_id, REC_both, LDI_both)
+
+############################################
+# 3. Group-level Mean and SD
+############################################
+
+mst_summary_both <- mst_metrics_both %>%
+  summarise(
+    
+    REC_both_mean = mean(REC_both),
+    REC_both_sd = sd(REC_both),
+    
+    LDI_both_mean = mean(LDI_both),
+    LDI_both_sd = sd(LDI_both)
+  )
+
+############################################
+# 4. Format results like in papers
+############################################
+
+mst_summary_both_formatted <- mst_summary_both %>%
+  mutate(
+    REC_both = sprintf("%.3f (%.3f)", REC_both_mean, REC_both_sd),
+    LDI_both = sprintf("%.3f (%.3f)", LDI_both_mean, LDI_both_sd)
+  ) %>%
+  select(REC_both, LDI_both)
+
+############################################
+# 5. Print outputs
+############################################
+
+cat("Participant-level MST metrics (Both dataset):\n")
+print(mst_metrics_both)
+
+cat("\nGroup summary:\n")
+print(mst_summary_both)
+
+cat("\nFormatted summary (Mean (SD)):\n")
+print(mst_summary_both_formatted)
+
+############################################
+# 6. Plot distributions of metrics
+############################################
+
+p <- mst_metrics_both %>%
+  pivot_longer(cols = c(REC_both, LDI_both),
+               names_to = "metric",
+               values_to = "value") %>%
+  ggplot(aes(x = metric, y = value, fill = metric)) +
+  geom_boxplot(alpha = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "MST Metrics Distribution (Both Dataset)",
+    x = "Metric",
+    y = "Score"
+  ) +
+  theme(legend.position = "none")
+p
+ggsave("both_MST_Metrics_Distribution.png", plot = p, width = 8, height = 5)
+```
+
+### Experiment 2: Only Item
+
+```{r}
+# Item Only - Task
+library(tidyverse)
+
+item_base_path <- "item_only"
+item_task_path <- file.path(item_base_path, "item_only_data")
+
+############################################
+# FIND TASK FILES
+############################################
+
+item_task_files <- list.files(
+  path = item_task_path,
+  pattern = "_MST_task_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of ITEM TASK files:", length(item_task_files), "\n")
+
+############################################
+# LOAD + CLEAN TASK FILES
+############################################
+
+load_item_task <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  participant_id <- substr(basename(file_path),1,5)
+
+  if(!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if(!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path,
+           trials.thisN,
+           trials.key_resp_9.rt,
+           trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+
+      trials.key_resp_9.rt = as.numeric(trials.key_resp_9.rt),
+      trials.key_resp_8.rt = as.numeric(trials.key_resp_8.rt),
+
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+
+      event_position = ((trial_number-1) %% 7) + 1,
+
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+
+      image_name = basename(image_path)
+    )
+}
+
+df_item_task <- map_dfr(item_task_files, load_item_task)
+
+cat("Unique participants:", length(unique(df_item_task$participant_id)), "\n")
+table(df_item_task$boundary_position)
+summary(df_item_task$rt)
+```
+
+```{r}
+############################################
+# FIND TEST FILES
+############################################
+
+item_test_files <- list.files(
+  path = item_task_path,
+  pattern = "_MST_test_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of ITEM TEST files:", length(item_test_files), "\n")
+
+############################################
+# LOAD + CLEAN TEST FILES
+############################################
+
+load_item_test <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name,"^Foils") ~ "Foil",
+        str_detect(image_name,"b\\.jpg$") ~ "Lure",
+        str_detect(image_name,"a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+}
+
+df_item_test <- map_dfr(item_test_files, load_item_test)
+
+cat("Unique participants:", length(unique(df_item_test$participant_id)), "\n")
+table(df_item_test$stimulus_type)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# 1. Compute response probabilities per participant
+############################################
+
+participant_probs_item <- df_item_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    
+    p_old_target = mean(stimulus_type == "Target" & response_type == "Old"),
+    
+    p_similar_lure = mean(stimulus_type == "Lure" & response_type == "Similar"),
+    
+    p_old_foil = mean(stimulus_type == "Foil" & response_type == "Old"),
+    
+    p_similar_foil = mean(stimulus_type == "Foil" & response_type == "Similar"),
+    
+    .groups = "drop"
+  )
+
+############################################
+# 2. Compute MST metrics
+############################################
+
+mst_metrics_item <- participant_probs_item %>%
+  mutate(
+    
+    REC_item = p_old_target - p_old_foil,
+    
+    LDI_item = p_similar_lure - p_similar_foil
+  ) %>%
+  select(participant_id, REC_item, LDI_item)
+
+############################################
+# 3. Group-level Mean and SD
+############################################
+
+mst_summary_item <- mst_metrics_item %>%
+  summarise(
+    
+    REC_item_mean = mean(REC_item),
+    REC_item_sd = sd(REC_item),
+    
+    LDI_item_mean = mean(LDI_item),
+    LDI_item_sd = sd(LDI_item)
+  )
+
+############################################
+# 4. Format results
+############################################
+
+mst_summary_item_formatted <- mst_summary_item %>%
+  mutate(
+    REC_item = sprintf("%.3f (%.3f)", REC_item_mean, REC_item_sd),
+    LDI_item = sprintf("%.3f (%.3f)", LDI_item_mean, LDI_item_sd)
+  ) %>%
+  select(REC_item, LDI_item)
+
+############################################
+# 5. Print outputs
+############################################
+
+cat("Participant-level MST metrics (Item Only dataset):\n")
+print(mst_metrics_item)
+
+cat("\nGroup summary:\n")
+print(mst_summary_item)
+
+cat("\nFormatted summary (Mean (SD)):\n")
+print(mst_summary_item_formatted)
+
+############################################
+# 6. Plot distributions
+############################################
+
+p <- mst_metrics_item %>%
+  pivot_longer(cols = c(REC_item, LDI_item),
+               names_to = "metric",
+               values_to = "value") %>%
+  ggplot(aes(x = metric, y = value, fill = metric)) +
+  geom_boxplot(alpha = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "MST Metrics Distribution (Item Only Dataset)",
+    x = "Metric",
+    y = "Score"
+  ) +
+  theme(legend.position = "none")
+p
+ggsave("item_MST_Metrics_Distribution.png", plot = p, width = 8, height = 5)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# Response distribution
+############################################
+
+p <- ggplot(df_item_test, aes(x = response_type)) +
+  geom_bar(fill = "darkorange") +
+  labs(
+    title = "Distribution of Responses (Item Only)",
+    x = "Response Type",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("item_Distribution_of_Responses.png", plot = p, width = 8, height = 5)
+
+############################################
+# Stimulus x Response confusion plot
+############################################
+
+p <- ggplot(df_item_test, aes(x = stimulus_type, fill = response_type)) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Type (Item Only)",
+    x = "Stimulus Type",
+    y = "Count",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("item_Responses_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time distribution
+############################################
+
+p <- ggplot(df_item_test, aes(x = trials.key_resp_3.rt)) +
+  geom_histogram(bins = 40, fill = "purple", alpha = 0.7) +
+  labs(
+    title = "Reaction Time Distribution (Item Only)",
+    x = "Reaction Time (seconds)",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("item_Reaction_Time_Distribution.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time by stimulus type
+############################################
+
+p <- ggplot(df_item_test,
+       aes(x = stimulus_type, y = trials.key_resp_3.rt, fill = stimulus_type)) +
+  geom_violin(trim = FALSE, alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time Distribution by Stimulus Type (Item Only)",
+    x = "Stimulus Type",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("item_Reaction_Time_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Position vs Response Type
+############################################
+
+p <- ggplot(df_item_test,
+       aes(x = factor(response_type), fill = factor(position_of_stimuli))) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Position (Item Only)",
+    x = "Response",
+    y = "Count",
+    fill = "Stimulus Position"
+  ) +
+  theme_minimal()
+p
+ggsave("item_Responses_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction Time by Stimulus Position
+############################################
+
+p <- ggplot(df_item_test,
+       aes(x = factor(position_of_stimuli),
+           y = trials.key_resp_3.rt,
+           fill = factor(position_of_stimuli))) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Stimulus Position (Item Only)",
+    x = "Stimulus Position",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("item_Reaction_Time_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Lure Position vs Response
+############################################
+
+p <- ggplot(df_item_test %>% filter(stimulus_type == "Lure"),
+       aes(x = factor(position_of_stimuli), fill = response_type)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Lure Responses by Similarity Position (Item Only)",
+    x = "Lure Position",
+    y = "Proportion",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("item_Lure_Responses_by_Similarity_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time vs response type
+############################################
+
+p <- ggplot(df_item_test,
+       aes(x = response_type, y = trials.key_resp_3.rt, fill = response_type)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Response Type (Item Only)",
+    x = "Response",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("item_Reaction_Time_by_Response_Type.png", plot = p, width = 8, height = 5)
+```
+
+### Experiment 3: Task Only
+
+```{r}
+library(tidyverse)
+
+############################################
+# SET PATH
+############################################
+
+task_only_base <- "task_only"
+
+task_only_path <- file.path(task_only_base, "task_only_data")
+
+############################################
+# FIND TASK FILES
+############################################
+
+task_only_task_files <- list.files(
+  path = task_only_path,
+  pattern = "task.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TASK-ONLY TASK files:", length(task_only_task_files), "\n")
+
+############################################
+# LOAD TASK DATA
+############################################
+
+load_task_only_task <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  participant_id <- substr(basename(file_path),1,5)
+
+  if(!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if(!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path,
+           trials.thisN,
+           trials.key_resp_9.rt,
+           trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+
+      event_position = ((trial_number-1) %% 7) + 1,
+
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+
+      image_name = basename(image_path)
+    )
+}
+
+df_task_task <- map_dfr(task_only_task_files, load_task_only_task)
+
+cat("Unique participants:", length(unique(df_task_task$participant_id)), "\n")
+table(df_task_task$boundary_position)
+summary(df_task_task$rt)
+```
+
+```{r}
+############################################
+# FIND TEST FILES
+############################################
+
+task_only_test_files <- list.files(
+  path = task_only_path,
+  pattern = "test.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TASK-ONLY TEST files:", length(task_only_test_files), "\n")
+
+############################################
+# LOAD TEST DATA
+############################################
+
+load_task_only_test <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name,"^Foils") ~ "Foil",
+        str_detect(image_name,"b\\.jpg$") ~ "Lure",
+        str_detect(image_name,"a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+}
+
+df_task_test <- map_dfr(task_only_test_files, load_task_only_test)
+
+cat("Unique participants:", length(unique(df_task_test$participant_id)), "\n")
+table(df_task_test$stimulus_type)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# Response distribution
+############################################
+
+p <- ggplot(df_task_test, aes(x = response_type)) +
+  geom_bar(fill = "darkorange") +
+  labs(
+    title = "Distribution of Responses (Task Only)",
+    x = "Response Type",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("task_Distribution_of_Responses.png", plot = p, width = 8, height = 5)
+
+############################################
+# Stimulus x Response confusion plot
+############################################
+
+p <- ggplot(df_task_test, aes(x = stimulus_type, fill = response_type)) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Type (Task Only)",
+    x = "Stimulus Type",
+    y = "Count",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("task_Responses_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time distribution
+############################################
+
+p <- ggplot(df_task_test, aes(x = trials.key_resp_3.rt)) +
+  geom_histogram(bins = 40, fill = "purple", alpha = 0.7) +
+  labs(
+    title = "Reaction Time Distribution (Task Only)",
+    x = "Reaction Time (seconds)",
+    y = "Count"
+  ) +
+  theme_minimal()
+p
+ggsave("task_Reaction_Time_Distribution.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time by stimulus type
+############################################
+
+p <- ggplot(df_task_test,
+       aes(x = stimulus_type, y = trials.key_resp_3.rt, fill = stimulus_type)) +
+  geom_violin(trim = FALSE, alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time Distribution by Stimulus Type (Task Only)",
+    x = "Stimulus Type",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("task_Reaction_Time_by_Stimulus_Type.png", plot = p, width = 8, height = 5)
+
+############################################
+# Position vs Response Type
+############################################
+
+p <- ggplot(df_task_test,
+       aes(x = factor(response_type), fill = factor(position_of_stimuli))) +
+  geom_bar(position = "dodge") +
+  labs(
+    title = "Responses by Stimulus Position (Task Only)",
+    x = "Response",
+    y = "Count",
+    fill = "Stimulus Position"
+  ) +
+  theme_minimal()
+p
+ggsave("task_Responses_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction Time by Stimulus Position
+############################################
+
+p <- ggplot(df_task_test,
+       aes(x = factor(position_of_stimuli),
+           y = trials.key_resp_3.rt,
+           fill = factor(position_of_stimuli))) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Stimulus Position (Task Only)",
+    x = "Stimulus Position",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("task_Reaction_Time_by_Stimulus_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Lure Position vs Response
+############################################
+
+p <- ggplot(df_task_test %>% filter(stimulus_type == "Lure"),
+       aes(x = factor(position_of_stimuli), fill = response_type)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Lure Responses by Similarity Position (Task Only)",
+    x = "Lure Position",
+    y = "Proportion",
+    fill = "Response"
+  ) +
+  theme_minimal()
+p
+ggsave("task_Lure_Responses_by_Similarity_Position.png", plot = p, width = 8, height = 5)
+
+############################################
+# Reaction time vs response type
+############################################
+
+p <- ggplot(df_task_test,
+       aes(x = response_type, y = trials.key_resp_3.rt, fill = response_type)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  labs(
+    title = "Reaction Time by Response Type (Task Only)",
+    x = "Response",
+    y = "Reaction Time (seconds)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("task_Reaction_Time_by_Response_Type.png", plot = p, width = 8, height = 5)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# 1. Compute response probabilities per participant
+############################################
+
+participant_probs_task <- df_task_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    
+    p_old_target = mean(stimulus_type == "Target" & response_type == "Old"),
+    
+    p_similar_lure = mean(stimulus_type == "Lure" & response_type == "Similar"),
+    
+    p_old_foil = mean(stimulus_type == "Foil" & response_type == "Old"),
+    
+    p_similar_foil = mean(stimulus_type == "Foil" & response_type == "Similar"),
+    
+    .groups = "drop"
+  )
+
+############################################
+# 2. Compute MST metrics
+############################################
+
+mst_metrics_task <- participant_probs_task %>%
+  mutate(
+    
+    REC_task = p_old_target - p_old_foil,
+    
+    LDI_task = p_similar_lure - p_similar_foil
+  ) %>%
+  select(participant_id, REC_task, LDI_task)
+
+############################################
+# 3. Group-level Mean and SD
+############################################
+
+mst_summary_task <- mst_metrics_task %>%
+  summarise(
+    
+    REC_task_mean = mean(REC_task),
+    REC_task_sd = sd(REC_task),
+    
+    LDI_task_mean = mean(LDI_task),
+    LDI_task_sd = sd(LDI_task)
+  )
+
+############################################
+# 4. Format results
+############################################
+
+mst_summary_task_formatted <- mst_summary_task %>%
+  mutate(
+    REC_task = sprintf("%.3f (%.3f)", REC_task_mean, REC_task_sd),
+    LDI_task = sprintf("%.3f (%.3f)", LDI_task_mean, LDI_task_sd)
+  ) %>%
+  select(REC_task, LDI_task)
+
+############################################
+# 5. Print outputs
+############################################
+
+cat("Participant-level MST metrics (Task Only dataset):\n")
+print(mst_metrics_task)
+
+cat("\nGroup summary:\n")
+print(mst_summary_task)
+
+cat("\nFormatted summary (Mean (SD)):\n")
+print(mst_summary_task_formatted)
+
+############################################
+# 6. Plot distributions
+############################################
+
+p <- mst_metrics_task %>%
+  pivot_longer(cols = c(REC_task, LDI_task),
+               names_to = "metric",
+               values_to = "value") %>%
+  ggplot(aes(x = metric, y = value, fill = metric)) +
+  geom_boxplot(alpha = 0.7) +
+  theme_minimal() +
+  labs(
+    title = "MST Metrics Distribution (Task Only Dataset)",
+    x = "Metric",
+    y = "Score"
+  ) +
+  theme(legend.position = "none")
+p
+ggsave("task_MST_Metrics_Distribution.png", plot = p, width = 8, height = 5)
+```
+
+```{r}
+library(tidyverse)
+
+############################################
+# Combine all experiments
+############################################
+
+rec_data <- bind_rows(
+  mst_metrics_both %>% mutate(experiment = "Both") %>% select(participant_id, experiment, REC = REC_both),
+  mst_metrics_item %>% mutate(experiment = "Item Only") %>% select(participant_id, experiment, REC = REC_item),
+  mst_metrics_task %>% mutate(experiment = "Task Only") %>% select(participant_id, experiment, REC = REC_task)
+)
+
+ldi_data <- bind_rows(
+  mst_metrics_both %>% mutate(experiment = "Both") %>% select(participant_id, experiment, LDI = LDI_both),
+  mst_metrics_item %>% mutate(experiment = "Item Only") %>% select(participant_id, experiment, LDI = LDI_item),
+  mst_metrics_task %>% mutate(experiment = "Task Only") %>% select(participant_id, experiment, LDI = LDI_task)
+)
+
+p <- ggplot(rec_data, aes(x = experiment, y = REC, fill = experiment)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.15, fill = "white") +
+  labs(
+    title = "Recognition Score (REC) Across Experiments",
+    x = "Experiment Type",
+    y = "REC Score"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("combined_REC_Across_Experiments.png", plot = p, width = 8, height = 5)
+
+p <- ggplot(ldi_data, aes(x = experiment, y = LDI, fill = experiment)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.15, fill = "white") +
+  labs(
+    title = "Lure Discrimination Index (LDI) Across Experiments",
+    x = "Experiment Type",
+    y = "LDI Score"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+p
+ggsave("combined_LDI_Across_Experiments.png", plot = p, width = 8, height = 5)
+
+metrics_all <- bind_rows(
+  rec_data %>% mutate(metric = "REC") %>% rename(value = REC),
+  ldi_data %>% mutate(metric = "LDI") %>% rename(value = LDI)
+)
+```

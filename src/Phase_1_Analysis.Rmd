@@ -1,0 +1,51 @@
+---
+title: "Project Phase 1 Analaysis"
+author: "Korlapati Keerthana"
+date: "05/3/2026"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+```{r}
+
+import pandas as pd
+import os
+import glob
+
+def load_participant_data(folder):
+
+    task_files = sorted(glob.glob(os.path.join(folder, "*_task_*.csv")))
+    test_files = sorted(glob.glob(os.path.join(folder, "*_test_*.csv")))
+
+    participants = {}
+
+    for f in task_files:
+        pid = os.path.basename(f).split("_")[0]
+        participants.setdefault(pid, {})["task"] = f
+
+    for f in test_files:
+        pid = os.path.basename(f).split("_")[0]
+        participants.setdefault(pid, {})["test"] = f
+
+    return participants
+
+
+def classify_stimulus(path):
+
+    if "foil" in path:
+        return "foil"
+    elif path.endswith("a.jpg"):
+        return "target"
+    elif path.endswith("b.jpg"):
+        return "lure"
+    else:
+        return "unknown"
+```
+
+```{r}
+
+
+```
