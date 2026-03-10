@@ -9,43 +9,942 @@ output:
     toc: yes
     toc_float: yes
 ---
+### Experiment 1: Both Item and Task
+
 ```{r}
+# Both Task and Item- Task
+library(tidyverse)
 
-import pandas as pd
-import os
-import glob
+# SET PATH
+base_path <- "Both_item_task"
 
-def load_participant_data(folder):
+task_path <- file.path(base_path, "both_data")
 
-    task_files = sorted(glob.glob(os.path.join(folder, "*_task_*.csv")))
-    test_files = sorted(glob.glob(os.path.join(folder, "*_test_*.csv")))
+# FIND TASK FILES
+task_files <- list.files(
+  path = task_path,
+  pattern = "_MST_task_.*\\.csv$",
+  full.names = TRUE
+)
 
-    participants = {}
+cat("Number of TASK files found:", length(task_files), "\n")
 
-    for f in task_files:
-        pid = os.path.basename(f).split("_")[0]
-        participants.setdefault(pid, {})["task"] = f
+# LOAD + CLEAN FUNCTION
+load_task_clean <- function(file_path) {
+  
+  df <- suppressMessages(
+    read_csv(
+      file_path,
+      show_col_types = FALSE,
+      name_repair = "unique"
+    )
+  )
+  
+  participant_id <- substr(basename(file_path), 1, 5)
+  
+  # Create missing columns if they don't exist
+  if(!"trials.key_resp_9.rt" %in% names(df)) {
+    df$trials.key_resp_9.rt <- NA
+  }
+  
+  if(!"trials.key_resp_8.rt" %in% names(df)) {
+    df$trials.key_resp_8.rt <- NA
+  }
+  
+  df_clean <- df %>%
+    
+    filter(!is.na(trials.thisN)) %>%
+    
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_9.rt,
+      trials.key_resp_8.rt
+    ) %>%
+    
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+      
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+      
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+      
+      event_position = ((trial_number - 1) %% 7) + 1,
+      
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+      
+      image_name = basename(image_path)
+    )
+  
+  return(df_clean)
+}
 
-    for f in test_files:
-        pid = os.path.basename(f).split("_")[0]
-        participants.setdefault(pid, {})["test"] = f
+# APPLY TO ALL FILES
+df_both_task <- map_dfr(task_files, load_task_clean)
 
-    return participants
-
-
-def classify_stimulus(path):
-
-    if "foil" in path:
-        return "foil"
-    elif path.endswith("a.jpg"):
-        return "target"
-    elif path.endswith("b.jpg"):
-        return "lure"
-    else:
-        return "unknown"
+# SANITY CHECKS
+cat("Unique participants:", length(unique(df_both_task$participant_id)), "\n")
+table(df_both_task$boundary_position)
+summary(df_both_task$rt)
 ```
 
 ```{r}
+library(tidyverse)
 
+# Both Task and Item- Test
+test_files <- list.files(
+  path = task_path,
+  pattern = "_MST_test_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TEST files found:", length(test_files), "\n")
+
+# LOAD + CLEAN FUNCTION
+load_test_clean <- function(file_path) {
+
+  df <- suppressMessages(
+    read_csv(file_path,
+             show_col_types = FALSE,
+             name_repair = "unique")
+  )
+
+  df_clean <- df %>%
+    
+    # keep only actual test trials
+    filter(!is.na(trials.thisN)) %>%
+    
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name, "^Foils") ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+
+  return(df_clean)
+}
+
+# APPLY TO ALL FILES
+df_both_test <- map_dfr(test_files, load_test_clean)
+
+# CHECK
+cat("Unique participants:", length(unique(df_both_test$participant_id)), "\n")
+table(df_both_test$stimulus_type)
 
 ```
+
+```{r}
+library(tidyverse)
+
+############################################
+# Reaction time by boundary condition
+############################################
+
+rt_summary <- df_both_task %>%
+  group_by(boundary_position) %>%
+  summarise(
+    mean_rt = mean(rt, na.rm = TRUE),
+    sd_rt = sd(rt, na.rm = TRUE),
+    n = n()
+  )
+
+print(rt_summary)
+```
+
+```{r}
+ggplot(df_both_task,
+       aes(x = boundary_position, y = rt, fill = boundary_position)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.15, fill = "white") +
+  labs(
+    title = "Encoding Reaction Time by Boundary Condition",
+    x = "Boundary Position",
+    y = "Reaction Time (ms)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+############################################
+# Join boundary position with test trials
+############################################
+
+encoding_lookup <- df_both_task %>%
+  select(participant_id, trial_number, boundary_position)
+
+df_analysis <- df_both_test %>%
+  left_join(encoding_lookup,
+            by = c("participant_id", "trial_number"))
+
+df_analysis <- df_analysis %>%
+  filter(stimulus_type %in% c("Target", "Lure"))
+
+df_analysis <- df_analysis %>%
+  mutate(
+    correct = case_when(
+      stimulus_type == "Target" & response_type == "Old" ~ 1,
+      stimulus_type == "Lure" & response_type == "Similar" ~ 1,
+      TRUE ~ 0
+    )
+  )
+
+anova_model <- aov(
+  correct ~ boundary_position * stimulus_type,
+  data = df_analysis
+)
+
+summary(anova_model)
+```
+
+```{r}
+############################################
+# Compute probabilities
+############################################
+
+participant_probs <- df_both_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    p_old_target = mean(stimulus_type == "Target" & response_type == "Old"),
+    p_old_foil = mean(stimulus_type == "Foil" & response_type == "Old"),
+    p_similar_lure = mean(stimulus_type == "Lure" & response_type == "Similar"),
+    p_similar_foil = mean(stimulus_type == "Foil" & response_type == "Similar"),
+    .groups = "drop"
+  )
+
+mst_metrics <- participant_probs %>%
+  mutate(
+    REC = p_old_target - p_old_foil,
+    LDI = p_similar_lure - p_similar_foil
+  )
+
+print(mst_metrics)
+```
+
+
+```{r}
+rm_data <- df_analysis %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+    accuracy = mean(correct),
+    .groups = "drop"
+  )
+
+library(afex)
+
+rm_anova <- aov_ez(
+  id = "participant_id",
+  dv = "accuracy",
+  data = rm_data,
+  within = "boundary_position"
+)
+
+print(rm_anova)
+```
+
+```{r}
+ggplot(rm_data,
+       aes(x = boundary_position,
+           y = accuracy,
+           fill = boundary_position)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.15, fill = "white") +
+  labs(
+    title = "Memory Accuracy Across Boundary Conditions",
+    x = "Boundary Condition",
+    y = "Accuracy"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Experiment 2: Only Item
+```{r}
+# Item Only - Task
+library(tidyverse)
+
+item_base_path <- "item_only"
+item_task_path <- file.path(item_base_path, "item_only_data")
+
+############################################
+# FIND TASK FILES
+############################################
+
+item_task_files <- list.files(
+  path = item_task_path,
+  pattern = "_MST_task_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of ITEM TASK files:", length(item_task_files), "\n")
+
+############################################
+# LOAD + CLEAN TASK FILES
+############################################
+
+load_item_task <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  participant_id <- substr(basename(file_path),1,5)
+
+  if(!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if(!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path,
+           trials.thisN,
+           trials.key_resp_9.rt,
+           trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+
+      trials.key_resp_9.rt = as.numeric(trials.key_resp_9.rt),
+      trials.key_resp_8.rt = as.numeric(trials.key_resp_8.rt),
+
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+
+      event_position = ((trial_number-1) %% 7) + 1,
+
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+
+      image_name = basename(image_path)
+    )
+}
+
+df_item_task <- map_dfr(item_task_files, load_item_task)
+
+cat("Unique participants:", length(unique(df_item_task$participant_id)), "\n")
+table(df_item_task$boundary_position)
+summary(df_item_task$rt)
+```
+
+```{r}
+############################################
+# FIND TEST FILES
+############################################
+
+item_test_files <- list.files(
+  path = item_task_path,
+  pattern = "_MST_test_.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of ITEM TEST files:", length(item_test_files), "\n")
+
+############################################
+# LOAD + CLEAN TEST FILES
+############################################
+
+load_item_test <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name,"^Foils") ~ "Foil",
+        str_detect(image_name,"b\\.jpg$") ~ "Lure",
+        str_detect(image_name,"a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+}
+
+df_item_test <- map_dfr(item_test_files, load_item_test)
+
+cat("Unique participants:", length(unique(df_item_test$participant_id)), "\n")
+table(df_item_test$stimulus_type)
+```
+
+```{r}
+############################################
+# Reaction time by boundary condition
+############################################
+
+rt_summary_item <- df_item_task %>%
+  group_by(boundary_position) %>%
+  summarise(
+    mean_rt = mean(rt, na.rm=TRUE),
+    sd_rt = sd(rt, na.rm=TRUE),
+    n = n()
+  )
+
+print(rt_summary_item)
+
+############################################
+# Identify trial type
+############################################
+
+df_item_task <- df_item_task %>%
+  mutate(
+    trial_type = case_when(
+      str_detect(image_name,"b\\.jpg$") ~ "Lure",
+      str_detect(image_name,"a\\.jpg$") ~ "Target",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+
+```{r}
+############################################
+# one-way ANOVA
+############################################
+
+anova_data_item <- df_item_task %>%
+  filter(!is.na(trial_type))
+
+anova_item <- aov(
+  rt ~ boundary_position,
+  data = df_item_task
+)
+
+
+summary(anova_item)
+```
+
+```{r}
+############################################
+# Participant probabilities
+############################################
+
+participant_probs_item <- df_item_test %>%
+  group_by(participant_id) %>%
+  summarise(
+
+    p_old_target = mean(stimulus_type=="Target" & response_type=="Old"),
+    p_old_foil = mean(stimulus_type=="Foil" & response_type=="Old"),
+
+    p_similar_lure = mean(stimulus_type=="Lure" & response_type=="Similar"),
+    p_similar_foil = mean(stimulus_type=="Foil" & response_type=="Similar"),
+
+    .groups="drop"
+  )
+
+############################################
+# Compute REC and LDI
+############################################
+
+mst_metrics_item <- participant_probs_item %>%
+  mutate(
+
+    REC_item = p_old_target - p_old_foil,
+
+    LDI_item = p_similar_lure - p_similar_foil
+  )
+
+print(mst_metrics_item)
+```
+
+```{r}
+############################################
+# Group statistics
+############################################
+
+mst_summary_item <- mst_metrics_item %>%
+  summarise(
+
+    REC_mean = mean(REC_item),
+    REC_sd = sd(REC_item),
+
+    LDI_mean = mean(LDI_item),
+    LDI_sd = sd(LDI_item)
+  )
+
+print(mst_summary_item)
+```
+
+```{r}
+############################################
+# Join encoding boundary labels
+############################################
+
+encoding_lookup_item <- df_item_task %>%
+  select(participant_id, image_name, boundary_position)
+
+df_item_test_joined <- df_item_test %>%
+  left_join(
+    encoding_lookup_item,
+    by=c("participant_id","image_name"),
+    relationship="many-to-many"
+  )
+
+############################################
+# Create accuracy columns
+############################################
+
+df_item_test_joined <- df_item_test_joined %>%
+  mutate(
+
+    lure_correct =
+      stimulus_type=="Lure" &
+      response_type=="Similar",
+
+    target_hit =
+      stimulus_type=="Target" &
+      response_type=="Old",
+
+    foil_correct =
+      stimulus_type=="Foil" &
+      response_type=="New"
+  )
+
+############################################
+# Compute performance by boundary condition
+############################################
+
+boundary_perf_item <- df_item_test_joined %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+
+    lure_CR = mean(lure_correct, na.rm=TRUE),
+    target_hit = mean(target_hit, na.rm=TRUE),
+
+    .groups="drop"
+  )
+
+print(boundary_perf_item)
+```
+
+```{r}
+############################################
+# Convert to wide format
+############################################
+
+perf_wide_item <- boundary_perf_item %>%
+  pivot_wider(
+    names_from = boundary_position,
+    values_from = c(lure_CR, target_hit)
+  )
+
+perf_diff_item <- perf_wide_item %>%
+  mutate(
+
+    lure_pre_diff = lure_CR_Pre - lure_CR_Non,
+    lure_post_diff = lure_CR_Post - lure_CR_Non,
+
+    target_pre_diff = target_hit_Pre - target_hit_Non,
+    target_post_diff = target_hit_Post - target_hit_Non
+  )
+```
+
+```{r}
+############################################
+# One-sample t-tests
+############################################
+
+t.test(perf_diff_item$lure_pre_diff)
+
+t.test(perf_diff_item$lure_post_diff)
+
+t.test(perf_diff_item$target_pre_diff)
+
+t.test(perf_diff_item$target_post_diff)
+```
+
+```{r}
+############################################
+# Independent t-test
+############################################
+
+t.test(
+  boundary_perf_item$lure_CR[boundary_perf_item$boundary_position=="Pre"],
+  boundary_perf_item$lure_CR[boundary_perf_item$boundary_position=="Post"]
+)
+```
+
+### Experiment 3: Task Only
+
+```{r}
+library(tidyverse)
+
+############################################
+# SET PATH
+############################################
+
+task_only_base <- "task_only"
+
+task_only_path <- file.path(task_only_base, "task_only_data")
+
+############################################
+# FIND TASK FILES
+############################################
+
+task_only_task_files <- list.files(
+  path = task_only_path,
+  pattern = "task.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TASK-ONLY TASK files:", length(task_only_task_files), "\n")
+
+############################################
+# LOAD TASK DATA
+############################################
+
+load_task_only_task <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  participant_id <- substr(basename(file_path),1,5)
+
+  if(!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if(!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(image_path,
+           trials.thisN,
+           trials.key_resp_9.rt,
+           trials.key_resp_8.rt) %>%
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+
+      trials.key_resp_9.rt = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      trials.key_resp_8.rt = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+
+      rt = case_when(
+        !is.na(trials.key_resp_9.rt) ~ trials.key_resp_9.rt * 1000,
+        !is.na(trials.key_resp_8.rt) ~ (3 + trials.key_resp_8.rt) * 1000,
+        TRUE ~ NA_real_
+      ),
+
+      event_position = ((trial_number-1) %% 7) + 1,
+
+      boundary_position = case_when(
+        event_position == 1 ~ "Post",
+        event_position == 7 ~ "Pre",
+        TRUE ~ "Non"
+      ),
+
+      image_name = basename(image_path)
+    )
+}
+
+df_task_task <- map_dfr(task_only_task_files, load_task_only_task)
+
+cat("Unique participants:", length(unique(df_task_task$participant_id)), "\n")
+table(df_task_task$boundary_position)
+summary(df_task_task$rt)
+```
+
+```{r}
+############################################
+# FIND TEST FILES
+############################################
+
+task_only_test_files <- list.files(
+  path = task_only_path,
+  pattern = "test.*\\.csv$",
+  full.names = TRUE
+)
+
+cat("Number of TASK-ONLY TEST files:", length(task_only_test_files), "\n")
+
+############################################
+# LOAD TEST DATA
+############################################
+
+load_task_only_test <- function(file_path){
+
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    select(
+      image_path,
+      trials.thisN,
+      trials.key_resp_3.keys,
+      trials.key_resp_3.rt,
+      position_of_stimuli,
+      participant
+    ) %>%
+    mutate(
+      participant_id = participant,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+
+      stimulus_type = case_when(
+        str_detect(image_name,"^Foils") ~ "Foil",
+        str_detect(image_name,"b\\.jpg$") ~ "Lure",
+        str_detect(image_name,"a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    )
+}
+
+df_task_test <- map_dfr(task_only_test_files, load_task_only_test)
+
+cat("Unique participants:", length(unique(df_task_test$participant_id)), "\n")
+table(df_task_test$stimulus_type)
+```
+
+```{r}
+############################################
+# Reaction time by boundary condition
+############################################
+
+rt_summary_task <- df_task_task %>%
+  group_by(boundary_position) %>%
+  summarise(
+    mean_rt = mean(rt, na.rm = TRUE),
+    sd_rt = sd(rt, na.rm = TRUE),
+    n = n()
+  )
+
+print(rt_summary_task)
+```
+
+```{r}
+############################################
+# One-way ANOVA
+############################################
+
+df_task_task <- df_task_task %>%
+  mutate(boundary_position = factor(boundary_position))
+
+anova_task <- aov(
+  rt ~ boundary_position,
+  data = df_task_task
+)
+
+summary(anova_task)
+```
+
+```{r}
+############################################
+# Participant probabilities
+############################################
+
+participant_probs_task <- df_task_test %>%
+  group_by(participant_id) %>%
+  summarise(
+
+    p_old_target = mean(stimulus_type == "Target" & response_type == "Old"),
+
+    p_old_foil = mean(stimulus_type == "Foil" & response_type == "Old"),
+
+    p_similar_lure = mean(stimulus_type == "Lure" & response_type == "Similar"),
+
+    p_similar_foil = mean(stimulus_type == "Foil" & response_type == "Similar"),
+
+    .groups = "drop"
+  )
+
+```
+
+```{r}
+############################################
+# REC and LDI
+############################################
+
+mst_metrics_task <- participant_probs_task %>%
+  mutate(
+
+    REC_task = p_old_target - p_old_foil,
+
+    LDI_task = p_similar_lure - p_similar_foil
+  )
+
+print(mst_metrics_task)
+
+############################################
+# Group summary
+############################################
+
+mst_summary_task <- mst_metrics_task %>%
+  summarise(
+
+    REC_mean = mean(REC_task),
+    REC_sd = sd(REC_task),
+
+    LDI_mean = mean(LDI_task),
+    LDI_sd = sd(LDI_task)
+  )
+
+print(mst_summary_task)
+```
+
+```{r}
+############################################
+# Join encoding boundary info
+############################################
+
+encoding_lookup_task <- df_task_task %>%
+  select(participant_id, image_name, boundary_position)
+
+df_task_test_joined <- df_task_test %>%
+  left_join(
+    encoding_lookup_task,
+    by = c("participant_id", "image_name"),
+    relationship = "many-to-many"
+  )
+
+############################################
+# Accuracy labels
+############################################
+
+df_task_test_joined <- df_task_test_joined %>%
+  mutate(
+
+    lure_correct =
+      stimulus_type == "Lure" &
+      response_type == "Similar",
+
+    target_hit =
+      stimulus_type == "Target" &
+      response_type == "Old",
+
+    foil_correct =
+      stimulus_type == "Foil" &
+      response_type == "New"
+  )
+
+############################################
+# Performance by boundary condition
+############################################
+
+boundary_perf_task <- df_task_test_joined %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(
+
+    lure_CR = mean(lure_correct, na.rm = TRUE),
+
+    target_hit = mean(target_hit, na.rm = TRUE),
+
+    .groups = "drop"
+  )
+
+print(boundary_perf_task)
+```
+
+```{r}
+############################################
+# Convert to wide format
+############################################
+
+perf_wide_task <- boundary_perf_task %>%
+  pivot_wider(
+    names_from = boundary_position,
+    values_from = c(lure_CR, target_hit)
+  )
+
+perf_diff_task <- perf_wide_task %>%
+  mutate(
+
+    lure_pre_diff = lure_CR_Pre - lure_CR_Non,
+    lure_post_diff = lure_CR_Post - lure_CR_Non,
+
+    target_pre_diff = target_hit_Pre - target_hit_Non,
+    target_post_diff = target_hit_Post - target_hit_Non
+  )
+```
+
+```{r}
+############################################
+# One-sample t-tests
+############################################
+
+t.test(perf_diff_task$lure_pre_diff)
+
+t.test(perf_diff_task$lure_post_diff)
+
+t.test(perf_diff_task$target_pre_diff)
+
+t.test(perf_diff_task$target_post_diff)
+```
+
+```{r}
+############################################
+# Pre vs Post comparison
+############################################
+
+t.test(
+  boundary_perf_task$lure_CR[
+    boundary_perf_task$boundary_position == "Pre"
+  ],
+  boundary_perf_task$lure_CR[
+    boundary_perf_task$boundary_position == "Post"
+  ]
+)
+```
+
