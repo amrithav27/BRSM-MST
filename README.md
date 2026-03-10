@@ -20,7 +20,7 @@ The project consists of three experimental conditions:
 ```
 BRSM-MST/
 ├── src/
-│   ├── phase1.Rmd                 # Main analysis notebook
+│   ├── Project_Phase1_Analysis_Complete  # Main analyses notebook
 │   ├── Phase_1_dataviz.Rmd       # Visualization with plot saving
 │   └── Phase_1_Analysis.Rmd      # Statistical analysis
 ├── Both_item_task/
