@@ -28,7 +28,9 @@ knitr::opts_chunk$set(
   dpi        = 150
 )
 
+
 library(tidyverse)
+# 
 library(afex)
 library(knitr)
 library(kableExtra)
@@ -455,10 +457,22 @@ stimulus_lookup_both <- df_both_test %>%
 
 df_both_task_labeled <- df_both_task %>%
   left_join(stimulus_lookup_both, by = c("participant_id", "image_name")) %>%
-  filter(!is.na(stimulus_type)) %>%
-  mutate(stimulus_type = factor(stimulus_type))
+  filter(
+    !is.na(stimulus_type),
+    !is.na(boundary_position),   # explicitly drop NA boundary
+    !is.na(rt)                   # drop missing RT rows too
+  ) %>%
+  mutate(
+    stimulus_type     = factor(stimulus_type),
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    participant_id    = factor(participant_id)   # ART needs id as factor
+  )
 
-cat("Rows with stimulus label:", nrow(df_both_task_labeled), "\n")
+# Confirm no NAs remain in model variables
+cat("NAs in boundary_position:", sum(is.na(df_both_task_labeled$boundary_position)), "\n")
+cat("NAs in stimulus_type:",     sum(is.na(df_both_task_labeled$stimulus_type)),     "\n")
+cat("NAs in rt:",                sum(is.na(df_both_task_labeled$rt)),                "\n")
+cat("NAs in participant_id:",    sum(is.na(df_both_task_labeled$participant_id)),    "\n")
 ```
 
 ```{r exp1_cell_count_table}
@@ -546,18 +560,41 @@ if (all_normal_both_rt) {
   cat("\nTukey HSD post-hoc (boundary_position):\n")
   print(TukeyHSD(rt_anova_both, which = "boundary_position"))
 } else {
-  cat("Non-normality detected -> Aligned Ranks Transformation ANOVA\n\n")
+  cat("Non-normality detected -> ART ANOVA\n\n")
   if (!requireNamespace("ARTool", quietly = TRUE))
     install.packages("ARTool", repos = "https://cloud.r-project.org")
   library(ARTool)
+
+  art_data <- df_both_task_labeled %>%
+    select(participant_id, boundary_position, stimulus_type, rt) %>%
+    drop_na() %>%
+    mutate(
+      # droplevels removes any empty factor levels after subsetting
+      boundary_position = droplevels(boundary_position),
+      stimulus_type     = droplevels(stimulus_type),
+      participant_id    = droplevels(factor(participant_id))
+    )
+
+  # Diagnostic: confirm all factors have enough levels before running ART
+  cat("boundary_position levels:", levels(art_data$boundary_position), "\n")
+  cat("stimulus_type levels:",     levels(art_data$stimulus_type),     "\n")
+  cat("Rows in art_data:",         nrow(art_data),                     "\n")
+
   art_model_both <- art(
-    rt ~ boundary_position * stimulus_type + Error(participant_id),
-    data = df_both_task_labeled
+    rt ~ boundary_position * stimulus_type + (1|participant_id),
+    data = art_data
   )
+
   print(anova(art_model_both))
-  cat("\nART pairwise contrasts (boundary_position):\n")
-  print(summary(art.con(art_model_both, "boundary_position",
-                        adjust = "bonferroni")))
+
+  # Only run pairwise contrasts if boundary_position has 2+ levels
+  if (nlevels(art_data$boundary_position) >= 2) {
+    cat("\nART pairwise contrasts (boundary_position):\n")
+    print(summary(art.con(art_model_both, "boundary_position",
+                          adjust = "bonferroni")))
+  } else {
+    cat("\nSkipping pairwise contrasts: boundary_position has fewer than 2 levels after cleaning.\n")
+  }
 }
 ```
 
