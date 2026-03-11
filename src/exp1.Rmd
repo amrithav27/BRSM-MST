@@ -1,0 +1,1062 @@
+---
+title: "Project Phase 1 Analysis EXP1"
+author: "Team Popcorn - Amritha, Ahana, Keerthana"
+date: "05/3/2026"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+    theme: flatly
+    highlight: tango
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    highlight: tango
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo       = TRUE,
+  warning    = FALSE,
+  message    = FALSE,
+  fig.width  = 9,
+  fig.height = 5,
+  fig.align  = "center",
+  dpi        = 150
+)
+
+# Create figures_report directory if it doesn't exist
+if (!dir.exists("figures_report")) {
+  dir.create("figures_report", recursive = TRUE)
+}
+
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(knitr)
+library(kableExtra)
+library(patchwork)
+
+# Colour palette: Non = blue | Pre = red | Post = green
+bp_colors <- c(Non = "#4D9DE0", Pre = "#E15554", Post = "#3BB273")
+bp_fills  <- c(Non = "#AED4F5", Pre = "#F5AEAE", Post = "#AEECD0")
+
+theme_study <- function(legend = "none") {
+  theme_minimal(base_size = 12) +
+    theme(
+      plot.title       = element_text(face = "bold", size = 13, hjust = 0.5),
+      plot.subtitle    = element_text(size = 10, hjust = 0.5, color = "grey45"),
+      axis.title       = element_text(size = 11),
+      axis.text        = element_text(size = 10),
+      strip.text       = element_text(face = "bold", size = 11),
+      strip.background = element_rect(fill = "grey96", color = NA),
+      legend.position  = legend,
+      legend.title     = element_text(size = 10, face = "bold"),
+      legend.text      = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(color = "grey93"),
+      panel.border     = element_rect(color = "grey85", fill = NA, linewidth = 0.4)
+    )
+}
+```
+
+---
+
+# Helper Functions
+
+```{r helper_functions}
+
+# =============================================================================
+# NORMALITY  (SAP 2.2 / 4 / 7.1)
+# Input:  cells_df with columns $vals (list of numeric vectors) and $label
+# Output: formatted kable of Shapiro-Wilk results
+# =============================================================================
+
+normality_table <- function(cells_df, caption_text = "Shapiro-Wilk Results") {
+  purrr::map_dfr(seq_len(nrow(cells_df)), function(i) {
+    v <- cells_df$vals[[i]]
+    v <- v[!is.na(v)]
+    if (length(v) < 3)
+      return(tibble(Condition = cells_df$label[i], n = length(v),
+                    W = NA_real_, p = NA_real_, Normal = "Too few"))
+    if (sd(v) == 0)
+      return(tibble(Condition = cells_df$label[i], n = length(v),
+                    W = NA_real_, p = NA_real_, Normal = "Identical values"))
+    sw <- shapiro.test(v)
+    tibble(Condition = cells_df$label[i], n = length(v),
+           W = round(sw$statistic, 4), p = round(sw$p.value, 4),
+           Normal = ifelse(sw$p.value >= 0.05, "Yes", "No"))
+  }) %>%
+    kable(caption = caption_text, align = "lrrrr") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = FALSE, font_size = 12)
+}
+
+# =============================================================================
+# DESCRIPTIVE TABLE
+# =============================================================================
+
+summary_table <- function(df, group_vars, dv,
+                          caption_text = "Descriptive Statistics") {
+  df %>%
+    group_by(across(all_of(group_vars))) %>%
+    summarise(n      = sum(!is.na(.data[[dv]])),
+              Median = round(median(.data[[dv]], na.rm = TRUE), 3),
+              Mean   = round(mean(.data[[dv]],   na.rm = TRUE), 3),
+              SD     = round(sd(.data[[dv]],     na.rm = TRUE), 3),
+              IQR    = round(IQR(.data[[dv]],    na.rm = TRUE), 3),
+              .groups = "drop") %>%
+    kable(caption = caption_text, align = "llrrrrr") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = FALSE, font_size = 12)
+}
+
+# =============================================================================
+# SAFE NON-PARAMETRIC WRAPPERS
+# Guard against single-group crashes
+# =============================================================================
+
+safe_kruskal <- function(values, groups, label = "") {
+  grp    <- droplevels(as.factor(groups))
+  n_grps <- sum(tapply(values, grp, function(x) sum(!is.na(x))) > 0)
+  if (n_grps < 2) {
+    cat("  Skipped - fewer than 2 groups with data:", label, "\n")
+    return(invisible(NULL))
+  }
+  print(kruskal.test(values ~ grp))
+}
+
+safe_pairwise_wilcox <- function(values, groups, label = "") {
+  grp    <- droplevels(as.factor(groups))
+  n_grps <- sum(tapply(values, grp, function(x) sum(!is.na(x))) > 0)
+  if (n_grps < 2) {
+    cat("  Skipped - fewer than 2 groups with data:", label, "\n")
+    return(invisible(NULL))
+  }
+  print(pairwise.wilcox.test(values, grp,
+                              p.adjust.method = "bonferroni", exact = FALSE))
+}
+
+# =============================================================================
+# SAP 2.1  Aggregate RT to per-participant means per Boundary x Trial Type
+# =============================================================================
+
+aggregate_rt <- function(df) {
+  df %>%
+    group_by(participant_id, boundary_position, stimulus_type) %>%
+    summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop") %>%
+    mutate(stimulus_type = as.character(stimulus_type))
+}
+
+# =============================================================================
+# SAP 2.3 / 2.4  Two-way RT analysis (parametric preferred, non-parametric fallback)
+#
+# The SAP asks for a two-way ANOVA (Boundary Position x Trial Type) with Tukey
+# HSD post-hoc. We first check whether per-participant means are normal using
+# Shapiro-Wilk. If normal -> two-way ANOVA + Tukey HSD (SAP 2.4).
+# If non-normal -> Kruskal-Wallis for each main effect + paired Wilcoxon for
+# Trial Type + within-type KW as an interaction proxy.
+#
+# NOTE ON INTERACTION (non-parametric path):
+# There is no single non-parametric equivalent of a 2-way ANOVA interaction.
+# The within-type KW tests (Boundary within Target, Boundary within Lure) serve
+# as an approximate interaction check: if the KW result differs markedly across
+# trial types, this suggests a boundary x trial-type interaction.
+# For a formal non-parametric interaction test, install the ARTool package and
+# uncomment the block at the end of this function.
+# =============================================================================
+
+rt_analysis <- function(df, exp_label = "") {
+  rt_agg <- aggregate_rt(df)
+  cat("\n===", exp_label, ": RT Analysis (SAP 2.3 / 2.4) ===\n")
+  cat("N participants:", n_distinct(rt_agg$participant_id), "\n")
+
+  # Normality check on per-participant cell means
+  all_vals <- rt_agg$mean_rt[!is.na(rt_agg$mean_rt)]
+  normal   <- FALSE
+  if (length(all_vals) >= 3 && sd(all_vals) > 0) {
+    sw     <- shapiro.test(all_vals)
+    normal <- sw$p.value >= 0.05
+    cat(sprintf("\nShapiro-Wilk on cell means: W = %.4f, p = %.4f -> %s\n",
+                sw$statistic, sw$p.value,
+                ifelse(normal, "Normal -> two-way ANOVA", "Non-normal -> KW fallback")))
+  }
+
+  if (normal) {
+    # -------------------------------------------------------------------
+    # PARAMETRIC PATH: Two-way ANOVA + Tukey HSD  (SAP 2.3 / 2.4)
+    # -------------------------------------------------------------------
+    cat("\n--- Two-Way ANOVA: RT ~ Boundary Position x Trial Type ---\n")
+    rt_wide <- rt_agg %>%
+      mutate(boundary_position = factor(boundary_position, levels = c("Non","Pre","Post")),
+             stimulus_type     = factor(stimulus_type,     levels = c("Target","Lure")))
+    m_aov <- aov(mean_rt ~ boundary_position * stimulus_type +
+                   Error(participant_id / (boundary_position * stimulus_type)),
+                 data = rt_wide)
+    print(summary(m_aov))
+
+    cat("\n--- Tukey HSD: Boundary Position post-hoc (SAP 2.4) ---\n")
+    # Tukey on boundary position collapsed across trial type
+    m_simple <- aov(mean_rt ~ boundary_position + Error(participant_id / boundary_position),
+                    data = rt_wide)
+    print(TukeyHSD(aov(mean_rt ~ boundary_position, data = rt_wide)))
+
+  } else {
+    # -------------------------------------------------------------------
+    # NON-PARAMETRIC FALLBACK
+    # Main Effect: Boundary Position (KW on per-participant means)
+    # Main Effect: Trial Type (paired Wilcoxon, same participants)
+    # Interaction proxy: KW within Target, KW within Lure
+    # -------------------------------------------------------------------
+    cat("\n--- Kruskal-Wallis: Main Effect of Boundary Position ---\n")
+    safe_kruskal(rt_agg$mean_rt, rt_agg$boundary_position, "Boundary Position")
+
+    cat("\n--- Bonferroni Pairwise Wilcoxon: Boundary Position (SAP 2.4 fallback) ---\n")
+    safe_pairwise_wilcox(rt_agg$mean_rt, rt_agg$boundary_position, "Boundary Position")
+
+    cat("\n--- Paired Wilcoxon: Main Effect of Trial Type (Target vs Lure) ---\n")
+    tt_wide <- rt_agg %>%
+      group_by(participant_id, stimulus_type) %>%
+      summarise(mean_rt = mean(mean_rt, na.rm = TRUE), .groups = "drop") %>%
+      pivot_wider(names_from = stimulus_type, values_from = mean_rt)
+
+    if (!all(c("Target", "Lure") %in% names(tt_wide))) {
+      cat("  Skipped: Target and/or Lure column absent.\n")
+      cat("  Columns:", paste(names(tt_wide), collapse = ", "), "\n")
+    } else {
+      tt_wide <- tt_wide %>% filter(!is.na(.data[["Target"]]), !is.na(.data[["Lure"]]))
+      cat("  Complete pairs:", nrow(tt_wide), "\n")
+      if (nrow(tt_wide) >= 3)
+        print(wilcox.test(tt_wide$Target, tt_wide$Lure, paired = TRUE, exact = FALSE))
+      else
+        cat("  Too few complete pairs.\n")
+    }
+
+    cat("\n--- Interaction Proxy: Boundary within Target ---\n")
+    df_tgt <- rt_agg %>% filter(stimulus_type == "Target")
+    safe_kruskal(df_tgt$mean_rt, df_tgt$boundary_position, "Target boundary")
+    safe_pairwise_wilcox(df_tgt$mean_rt, df_tgt$boundary_position, "Target boundary")
+
+    cat("\n--- Interaction Proxy: Boundary within Lure ---\n")
+    df_lure <- rt_agg %>% filter(stimulus_type == "Lure")
+    safe_kruskal(df_lure$mean_rt, df_lure$boundary_position, "Lure boundary")
+    safe_pairwise_wilcox(df_lure$mean_rt, df_lure$boundary_position, "Lure boundary")
+  }
+
+  # ============================================================
+  # COMMENTED OUT: Aligned Ranks Transformation ANOVA
+  # Proper non-parametric 2-way interaction test.
+  # Requires: install.packages("ARTool")
+  #
+  # library(ARTool)
+  # rt_art <- rt_agg %>%
+  #   mutate(boundary_position = factor(boundary_position),
+  #          stimulus_type     = factor(stimulus_type),
+  #          participant_id    = factor(participant_id))
+  # m_art <- art(mean_rt ~ boundary_position * stimulus_type +
+  #                Error(participant_id), data = rt_art)
+  # print(anova(m_art))
+  # ============================================================
+}
+
+# =============================================================================
+# SAP 5 / 6  Repeated-measures test (Friedman if non-normal) + Bonferroni post-hoc
+#
+# SAP 5 asks for RM-ANOVA on: lure_CR, target_hit, REC, LDI
+# RM-ANOVA requires normality. If violated -> Friedman test.
+# SAP 6: Bonferroni-corrected pairwise comparisons.
+# =============================================================================
+
+rm_analysis <- function(df, dv, pid_var = "participant_id",
+                         within_var = "boundary_position", label = "") {
+  cat("\n---", label, ": RM Analysis (SAP 5 / 6) ---\n")
+
+  # Collapse any duplicate participant x boundary rows to a single mean
+  df_agg <- df %>%
+    group_by(.data[[pid_var]], .data[[within_var]]) %>%
+    summarise(across(all_of(dv), ~ mean(.x, na.rm = TRUE)), .groups = "drop")
+
+  complete_pids <- df_agg %>%
+    group_by(.data[[pid_var]]) %>%
+    summarise(n_lev = n_distinct(.data[[within_var]]), .groups = "drop") %>%
+    filter(n_lev == 3) %>% pull(.data[[pid_var]])
+
+  df_c      <- df_agg %>% filter(.data[[pid_var]] %in% complete_pids) %>% droplevels()
+  n_kept    <- length(complete_pids)
+  n_dropped <- n_distinct(df[[pid_var]]) - n_kept
+  cat("  Participants included:", n_kept, "| Dropped (incomplete):", n_dropped, "\n")
+
+  if (n_kept < 3) {
+    cat("  Too few complete participants.\n"); return(invisible(NULL))
+  }
+
+  wide <- df_c %>%
+    select(all_of(c(pid_var, within_var, dv))) %>%
+    pivot_wider(names_from = all_of(within_var), values_from = all_of(dv),
+                values_fn = mean)
+
+  # Normality check on the DV values
+  all_vals <- df_c[[dv]]
+  normal   <- FALSE
+  if (length(all_vals[!is.na(all_vals)]) >= 3 && sd(all_vals, na.rm = TRUE) > 0) {
+    sw     <- shapiro.test(all_vals[!is.na(all_vals)])
+    normal <- sw$p.value >= 0.05
+    cat(sprintf("  Shapiro-Wilk: W = %.4f, p = %.4f -> %s\n",
+                sw$statistic, sw$p.value,
+                ifelse(normal, "Normal -> RM-ANOVA", "Non-normal -> Friedman")))
+  }
+
+  if (normal) {
+    # -----------------------------------------------------------------
+    # RM-ANOVA (parametric, SAP 5)
+    # -----------------------------------------------------------------
+    cat("  Running one-way RM-ANOVA...\n")
+    df_c[[within_var]] <- factor(df_c[[within_var]], levels = c("Non","Pre","Post"))
+    df_c[[pid_var]]    <- factor(df_c[[pid_var]])
+    m_rm <- aov(as.formula(paste(dv, "~", within_var,
+                                  "+ Error(", pid_var, "/", within_var, ")")),
+                data = df_c)
+    print(summary(m_rm))
+
+    # Bonferroni post-hoc via pairwise t-tests (SAP 6)
+    cat("\n  Bonferroni pairwise t-tests (SAP 6):\n")
+    lvls <- levels(droplevels(as.factor(df_c[[within_var]])))
+    results_rm <- map_dfr(combn(lvls, 2, simplify = FALSE), function(pair) {
+      x1 <- df_c[[dv]][as.character(df_c[[within_var]]) == pair[1]]
+      x2 <- df_c[[dv]][as.character(df_c[[within_var]]) == pair[2]]
+      tt <- t.test(x1, x2, paired = FALSE)
+      tibble(Comparison = paste(pair[1], "vs", pair[2]),
+             t = round(tt$statistic, 3), p_raw = round(tt$p.value, 4))
+    }) %>%
+      mutate(p_bonferroni = round(p.adjust(p_raw, "bonferroni"), 4),
+             Significant  = ifelse(p_bonferroni < 0.05, "Yes", "No"))
+    print(kable(results_rm,
+                caption = paste("Bonferroni Post-Hoc -", label),
+                align = "lrrrc") %>%
+            kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                          full_width = FALSE, font_size = 12))
+
+  } else {
+    # -----------------------------------------------------------------
+    # FRIEDMAN TEST (non-parametric fallback, SAP 5)
+    # -----------------------------------------------------------------
+    mat <- wide %>% select(-all_of(pid_var)) %>% as.matrix()
+    print(friedman.test(mat))
+
+    # Bonferroni pairwise Wilcoxon (SAP 6)
+    cat("\n  Bonferroni pairwise Wilcoxon (SAP 6):\n")
+    long      <- df_c %>% select(all_of(c(pid_var, within_var, dv)))
+    levels_bp <- levels(droplevels(as.factor(df_c[[within_var]])))
+    results_fw <- map_dfr(combn(levels_bp, 2, simplify = FALSE), function(pair) {
+      x1 <- long[[dv]][as.character(long[[within_var]]) == pair[1]]
+      x2 <- long[[dv]][as.character(long[[within_var]]) == pair[2]]
+      wt <- wilcox.test(x1, x2, paired = FALSE, exact = FALSE)
+      tibble(Comparison = paste(pair[1], "vs", pair[2]),
+             W = round(wt$statistic, 2), p_raw = round(wt$p.value, 4))
+    }) %>%
+      mutate(p_bonferroni = round(p.adjust(p_raw, "bonferroni"), 4),
+             Significant  = ifelse(p_bonferroni < 0.05, "Yes", "No"))
+    print(kable(results_fw,
+                caption = paste("Bonferroni Post-Hoc (Wilcoxon) -", label),
+                align = "lrrrc") %>%
+            kable_styling(bootstrap_options = c("striped","hover","condensed"),
+                          full_width = FALSE, font_size = 12))
+  }
+  return(invisible(df_c))
+}
+
+# =============================================================================
+# SAP 7 / 7.1  Compute difference scores and run normality-adaptive one-sample test
+#
+# Contrasts: Pre - Non and Post - Non (for lure_CR and target_hit)
+# values_fn = mean prevents list-column bug if duplicates exist
+# =============================================================================
+
+compute_diff_scores <- function(bp_df) {
+  bp_df %>%
+    group_by(participant_id, boundary_position) %>%
+    summarise(lure_CR    = mean(lure_CR,    na.rm = TRUE),
+              target_hit = mean(target_hit, na.rm = TRUE),
+              .groups    = "drop") %>%
+    pivot_wider(names_from  = boundary_position,
+                values_from = c(lure_CR, target_hit)) %>%
+    mutate(
+      lure_pre_diff    = lure_CR_Pre    - lure_CR_Non,
+      lure_post_diff   = lure_CR_Post   - lure_CR_Non,
+      target_pre_diff  = target_hit_Pre  - target_hit_Non,
+      target_post_diff = target_hit_Post - target_hit_Non
+    )
+}
+
+one_sample_test_adaptive <- function(x, label = "") {
+  cat("\n---", label, "---\n")
+  x <- x[!is.na(x)]
+  if (length(x) < 3) {
+    cat("  Too few observations (n =", length(x), ").\n")
+    return(invisible(NULL))
+  }
+  sw <- shapiro.test(x)
+  cat(sprintf("  Shapiro-Wilk: W = %.4f, p = %.4f -> %s\n",
+              sw$statistic, sw$p.value,
+              ifelse(sw$p.value >= 0.05,
+                     "Normal -> one-sample t-test",
+                     "NON-NORMAL -> Wilcoxon signed-rank")))
+  if (sw$p.value >= 0.05) print(t.test(x, mu = 0))
+  else print(wilcox.test(x, mu = 0, exact = FALSE))
+}
+
+# =============================================================================
+# SAP 8  Normality-aware paired test: Pre vs Post (within-participant)
+# =============================================================================
+
+paired_test_adaptive <- function(df, dv, label = "") {
+  cat("\n---", label, ": Paired Pre vs Post (SAP 8) ---\n")
+  wide <- df %>%
+    group_by(participant_id, boundary_position) %>%
+    summarise(val = mean(.data[[dv]], na.rm = TRUE), .groups = "drop") %>%
+    filter(boundary_position %in% c("Pre", "Post")) %>%
+    pivot_wider(names_from = boundary_position, values_from = val) %>%
+    filter(!is.na(.data[["Pre"]]), !is.na(.data[["Post"]]))
+  cat("  Complete pairs:", nrow(wide), "\n")
+  if (nrow(wide) < 3) { cat("  Too few complete pairs.\n"); return(invisible(NULL)) }
+  diffs <- wide$Pre - wide$Post
+  sw    <- shapiro.test(diffs)
+  cat(sprintf("  Shapiro-Wilk on differences: W = %.4f, p = %.4f -> %s\n",
+              sw$statistic, sw$p.value,
+              ifelse(sw$p.value >= 0.05, "Normal -> paired t-test",
+                     "NON-NORMAL -> Wilcoxon signed-rank")))
+  if (sw$p.value >= 0.05) print(t.test(wide$Pre, wide$Post, paired = TRUE))
+  else print(wilcox.test(wide$Pre, wide$Post, paired = TRUE, exact = FALSE))
+}
+
+# =============================================================================
+# SAP 9  Linear mixed-effects model on trial-level data
+#
+# DV is binary (0/1) per trial; lmer gives a linear probability model.
+# For a fully correct binary analysis use glmer(family = binomial) - see
+# commented block inside the function.
+# =============================================================================
+
+run_lme_trial <- function(df_labeled, exp_label = "") {
+  cat("\n===", exp_label, ": LME Models (SAP 9) ===\n")
+  cat("Formula: correct ~ boundary_position + (1 | participant_id)\n\n")
+
+  df_lme <- df_labeled %>%
+    mutate(
+      lure_correct      = as.integer(stimulus_type == "Lure"   & response_type == "Similar"),
+      target_hit        = as.integer(stimulus_type == "Target" & response_type == "Old"),
+      boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post"))
+    )
+
+  cat("--- Lure Correct Rejection ---\n")
+  df_l <- df_lme %>% filter(as.character(stimulus_type) == "Lure")
+  if (n_distinct(df_l$participant_id) >= 3) {
+    m_l <- lmer(lure_correct ~ boundary_position + (1 | participant_id),
+                data = df_l, REML = TRUE)
+    print(summary(m_l))
+    cat("\nAnova (Type III):\n"); print(anova(m_l))
+  } else cat("  Too few participants.\n")
+
+  cat("\n--- Target Hit Rate ---\n")
+  df_t <- df_lme %>% filter(as.character(stimulus_type) == "Target")
+  if (n_distinct(df_t$participant_id) >= 3) {
+    m_t <- lmer(target_hit ~ boundary_position + (1 | participant_id),
+                data = df_t, REML = TRUE)
+    print(summary(m_t))
+    cat("\nAnova (Type III):\n"); print(anova(m_t))
+  } else cat("  Too few participants.\n")
+
+  # ============================================================
+  # COMMENTED OUT: logistic mixed model (correct for binary DV)
+  # Uncomment if preferred over linear probability model above.
+  #
+  # m_l_glmer <- glmer(
+  #   lure_correct ~ boundary_position + (1 | participant_id),
+  #   data   = df_lme %>% filter(stimulus_type == "Lure"),
+  #   family = binomial
+  # )
+  # print(summary(m_l_glmer))
+  # m_t_glmer <- glmer(
+  #   target_hit ~ boundary_position + (1 | participant_id),
+  #   data   = df_lme %>% filter(stimulus_type == "Target"),
+  #   family = binomial
+  # )
+  # print(summary(m_t_glmer))
+  # ============================================================
+}
+
+# =============================================================================
+# SAP 10  Lure similarity bin analysis
+# =============================================================================
+
+lure_bin_analysis <- function(test_df, task_df, exp_label = "") {
+  cat("\n===", exp_label, ": Lure Similarity Bin Analysis (SAP 10) ===\n\n")
+
+  lure_data <- test_df %>%
+    filter(stimulus_type == "Lure") %>%
+    left_join(task_df %>%
+                select(participant_id, image_name, boundary_position) %>%
+                distinct(),
+              by = c("participant_id", "image_name")) %>%
+    filter(!is.na(boundary_position)) %>%
+    mutate(
+      sim_bin = case_when(
+        str_detect(image_name, "_1[_\\.]|bin1|lure1|sim1|low")  ~ "Low",
+        str_detect(image_name, "_2[_\\.]|bin2|lure2|sim2|med")  ~ "Medium",
+        str_detect(image_name, "_3[_\\.]|bin3|lure3|sim3|high") ~ "High",
+        TRUE ~ NA_character_
+      ),
+      lure_correct = (response_type == "Similar")
+    ) %>%
+    filter(!is.na(sim_bin))
+
+  if (nrow(lure_data) == 0) {
+    cat("No similarity bin information found in image names.\n")
+    cat("Sample lure image names:\n")
+    print(head(test_df$image_name[test_df$stimulus_type == "Lure"], 10))
+    return(invisible(NULL))
+  }
+
+  cat("Lure trials with bin info:", nrow(lure_data), "\n")
+  print(table(lure_data$sim_bin, lure_data$boundary_position))
+
+  lure_agg <- lure_data %>%
+    group_by(participant_id, boundary_position, sim_bin) %>%
+    summarise(lure_CR = mean(lure_correct, na.rm = TRUE), .groups = "drop") %>%
+    mutate(sim_bin = factor(sim_bin, levels = c("Low", "Medium", "High")))
+
+  cat("\n--- KW: Boundary Position within each Similarity Bin ---\n")
+  for (b in levels(lure_agg$sim_bin)) {
+    cat("\nBin:", b, "\n")
+    sub <- lure_agg %>% filter(sim_bin == b)
+    safe_kruskal(sub$lure_CR, sub$boundary_position, paste("Bin:", b))
+  }
+
+  cat("\n--- KW: Similarity Bin within each Boundary Position ---\n")
+  for (bp_lv in levels(droplevels(as.factor(lure_agg$boundary_position)))) {
+    cat("\nBoundary:", bp_lv, "\n")
+    sub <- lure_agg %>% filter(as.character(boundary_position) == bp_lv)
+    safe_kruskal(sub$lure_CR, sub$sim_bin, paste("Boundary:", bp_lv))
+  }
+
+  sum_df <- lure_agg %>%
+    group_by(boundary_position, sim_bin) %>%
+    summarise(median_CR = median(lure_CR, na.rm = TRUE),
+              q25 = quantile(lure_CR, 0.25, na.rm = TRUE),
+              q75 = quantile(lure_CR, 0.75, na.rm = TRUE),
+              .groups = "drop")
+
+  print(
+    ggplot(sum_df, aes(x = boundary_position, y = median_CR,
+                       color = sim_bin, group = sim_bin)) +
+      geom_ribbon(aes(ymin = q25, ymax = q75, fill = sim_bin),
+                  alpha = 0.12, color = NA) +
+      geom_line(linewidth = 1.2) +
+      geom_point(size = 4, shape = 21, aes(fill = sim_bin),
+                 color = "white", stroke = 1.6) +
+      scale_color_manual(values = c(Low = "#4D9DE0", Medium = "#E8A838", High = "#E15554")) +
+      scale_fill_manual(values  = c(Low = "#4D9DE0", Medium = "#E8A838", High = "#E15554")) +
+      labs(title    = paste(exp_label, ": Lure CR by Boundary x Similarity Bin"),
+           subtitle = "Shaded band = IQR | Points = median",
+           x = "Boundary Position", y = "Lure Correct Rejection Rate",
+           color = "Similarity Bin", fill = "Similarity Bin") +
+      theme_study(legend = "right")
+  )
+  return(invisible(lure_agg))
+}
+
+# =============================================================================
+# PLOTS
+# =============================================================================
+
+# --- Spaghetti + summary plot (best for within-participant repeated measures) ---
+# Shows individual participant trajectories (thin grey lines) plus group median
+# with IQR as a bold overlay. Clearly communicates both individual variability
+# and the group-level trend without hiding the data.
+
+spaghetti_plot <- function(df, x_var, y_var,
+                            title = "", subtitle = "",
+                            x_lab = x_var, y_lab = y_var,
+                            facet_var = NULL) {
+  sum_df <- df %>%
+    group_by(across(all_of(c(x_var, facet_var)))) %>%
+    summarise(median_val = median(.data[[y_var]], na.rm = TRUE),
+              q25        = quantile(.data[[y_var]], 0.25, na.rm = TRUE),
+              q75        = quantile(.data[[y_var]], 0.75, na.rm = TRUE),
+              .groups    = "drop")
+
+  p <- ggplot(df, aes(x = .data[[x_var]], y = .data[[y_var]],
+                       group = participant_id)) +
+    # Individual participant lines
+    geom_line(color = "grey70", linewidth = 0.5, alpha = 0.6) +
+    geom_point(color = "grey60", size = 1.5, alpha = 0.5) +
+    # Group median + IQR ribbon
+    geom_ribbon(data = sum_df,
+                aes(y = median_val, ymin = q25, ymax = q75, group = 1),
+                fill = "#4D9DE0", alpha = 0.18, inherit.aes = FALSE) +
+    geom_line(data = sum_df,
+              aes(y = median_val, group = 1),
+              color = "#2176AE", linewidth = 1.5, inherit.aes = FALSE) +
+    geom_point(data = sum_df,
+               aes(y = median_val, fill = .data[[x_var]], group = 1),
+               shape = 21, size = 4, color = "white", stroke = 1.8,
+               inherit.aes = FALSE) +
+    scale_fill_manual(values = bp_colors) +
+    labs(title = title, subtitle = subtitle, x = x_lab, y = y_lab) +
+    theme_study()
+
+  if (!is.null(facet_var))
+    p <- p + facet_wrap(as.formula(paste("~", facet_var)))
+  return(p)
+}
+
+# --- Spaghetti for two groups (RT: Target vs Lure) ---
+spaghetti_grouped <- function(df, x_var, y_var, group_var,
+                               title = "", subtitle = "",
+                               x_lab = x_var, y_lab = y_var,
+                               colors = c("#4D9DE0", "#E15554")) {
+  grp_lvls <- unique(df[[group_var]])
+  sum_df <- df %>%
+    group_by(across(all_of(c(x_var, group_var)))) %>%
+    summarise(median_val = median(.data[[y_var]], na.rm = TRUE),
+              q25        = quantile(.data[[y_var]], 0.25, na.rm = TRUE),
+              q75        = quantile(.data[[y_var]], 0.75, na.rm = TRUE),
+              .groups    = "drop")
+
+  ggplot(df, aes(x = .data[[x_var]], y = .data[[y_var]],
+                  group = interaction(participant_id, .data[[group_var]]),
+                  color = .data[[group_var]])) +
+    geom_line(aes(color = .data[[group_var]]), linewidth = 0.4, alpha = 0.35) +
+    geom_line(data = sum_df,
+              aes(y = median_val, group = .data[[group_var]],
+                  color = .data[[group_var]]),
+              linewidth = 1.6, inherit.aes = FALSE) +
+    geom_pointrange(data = sum_df,
+                    aes(y = median_val, ymin = q25, ymax = q75,
+                        color = .data[[group_var]], group = .data[[group_var]]),
+                    size = 0.7, fatten = 4, inherit.aes = FALSE) +
+    scale_color_manual(values = setNames(colors, grp_lvls)) +
+    labs(title = title, subtitle = subtitle,
+         x = x_lab, y = y_lab, color = group_var) +
+    theme_study(legend = "right")
+}
+
+# --- Difference score plot (violin + box + jitter + mean diamond) ---
+diff_score_plot <- function(diff_df, title = "") {
+  req <- c("participant_id", "lure_pre_diff", "lure_post_diff",
+           "target_pre_diff", "target_post_diff")
+  missing <- setdiff(req, names(diff_df))
+  if (length(missing) > 0) {
+    cat("diff_score_plot: missing columns:", paste(missing, collapse = ", "), "\n")
+    return(invisible(NULL))
+  }
+  plot_df <- diff_df %>%
+    select(all_of(req)) %>%
+    pivot_longer(-participant_id, names_to = "contrast", values_to = "diff") %>%
+    filter(!is.na(diff)) %>%
+    mutate(
+      Measure   = ifelse(str_detect(contrast, "lure"), "Lure CR", "Target Hit"),
+      Condition = factor(ifelse(str_detect(contrast, "pre"), "Pre - Non", "Post - Non"),
+                         levels = c("Pre - Non", "Post - Non"))
+    )
+  if (nrow(plot_df) == 0) {
+    cat("diff_score_plot: no data after filtering NAs.\n"); return(invisible(NULL))
+  }
+  ggplot(plot_df, aes(x = Condition, y = diff, fill = Condition)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+    geom_violin(alpha = 0.40, trim = FALSE, color = NA) +
+    geom_boxplot(width = 0.15, fill = "white", color = "grey30",
+                 outlier.shape = NA, linewidth = 0.7) +
+    geom_jitter(aes(color = Condition), width = 0.07, size = 2.2, alpha = 0.7) +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 4.5,
+                 fill = "white", aes(color = Condition), stroke = 1.8) +
+    scale_fill_manual(values  = c("Pre - Non" = "#F5AEAE", "Post - Non" = "#AEECD0")) +
+    scale_color_manual(values = c("Pre - Non" = "#E15554", "Post - Non" = "#3BB273")) +
+    facet_wrap(~ Measure, scales = "free_y") +
+    labs(title    = title,
+         subtitle = "Dashed line = 0 | Diamond = mean | Points = participants",
+         x = "Contrast", y = "Difference in Proportion Correct") +
+    theme_study()
+}
+
+# --- REC / LDI plot ---
+rec_ldi_plot <- function(metrics_df, rec_col, ldi_col, title = "") {
+  metrics_df %>%
+    pivot_longer(cols = c(all_of(rec_col), all_of(ldi_col)),
+                 names_to = "Metric", values_to = "Value") %>%
+    mutate(Metric = recode(Metric, !!rec_col := "REC", !!ldi_col := "LDI"),
+           Metric = factor(Metric, levels = c("REC", "LDI"))) %>%
+    ggplot(aes(x = Metric, y = Value, fill = Metric, color = Metric)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.8) +
+    geom_violin(alpha = 0.30, trim = FALSE, color = NA) +
+    geom_boxplot(width = 0.14, fill = "white", outlier.shape = NA, linewidth = 0.7) +
+    geom_jitter(width = 0.07, size = 2.5, alpha = 0.7) +
+    stat_summary(fun = mean, geom = "point", shape = 23, size = 4.5,
+                 fill = "white", stroke = 1.8) +
+    scale_fill_manual(values  = c(REC = "#AED4F5", LDI = "#F5AEAE")) +
+    scale_color_manual(values = c(REC = "#4D9DE0", LDI = "#E15554")) +
+    labs(title    = title,
+         subtitle = "Dashed line = 0 | Diamond = mean | Points = participants",
+         x = "Metric", y = "Score") +
+    theme_study()
+}
+
+# --- Q-Q plot ---
+qq_plot <- function(x, label = "") {
+  tibble(vals = x) %>%
+    ggplot(aes(sample = vals)) +
+    stat_qq(color = "#4D9DE0", alpha = 0.75, size = 2) +
+    stat_qq_line(color = "#E15554", linewidth = 0.9, linetype = "dashed") +
+    labs(title = paste("Q-Q:", label), subtitle = "Close to line = normal",
+         x = "Theoretical Quantiles", y = "Sample Quantiles") +
+    theme_study()
+}
+```
+
+---
+
+# Experiment 1: Both Item and Task
+
+## 1.1 Load Task Data
+
+```{r exp1_task_load}
+# CSV columns (Both & Item experiments):
+#   trials.thisN          -> trial row filter (NA = non-trial rows, excluded)
+#   image_path            -> stimulus path; basename used as image_name
+#   participant           -> participant ID
+#   trials.key_resp_9.rt  -> RT window 1 (0-3 s)
+#   trials.key_resp_8.rt  -> RT window 2 (add 3 s offset for true RT)
+# Task-only CSVs use bare key_resp_9.rt / key_resp_8.rt (auto-detected below)
+
+task_files_1 <- list.files(
+  "Both_item_task/both_data", pattern = "_MST_task_.*\\.csv$", full.names = TRUE
+)
+cat("Task files found:", length(task_files_1), "\n")
+
+load_task <- function(file_path) {
+  df  <- suppressMessages(read_csv(file_path, show_col_types = FALSE))
+  pid <- if ("participant" %in% names(df)) {
+    as.character(as.integer(df$participant[!is.na(df$participant)][1]))
+  } else {
+    as.character(as.integer(substr(basename(file_path), 1, 5)))
+  }
+  rt9_col <- if ("trials.key_resp_9.rt" %in% names(df)) "trials.key_resp_9.rt" else "key_resp_9.rt"
+  rt8_col <- if ("trials.key_resp_8.rt" %in% names(df)) "trials.key_resp_8.rt" else "key_resp_8.rt"
+  if (!rt9_col %in% names(df)) df[[rt9_col]] <- NA_real_
+  if (!rt8_col %in% names(df)) df[[rt8_col]] <- NA_real_
+
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    transmute(
+      participant_id    = pid,
+      image_name        = basename(image_path),
+      trial_number      = trials.thisN + 1,
+      rt9               = suppressWarnings(as.numeric(.data[[rt9_col]])),
+      rt8               = suppressWarnings(as.numeric(.data[[rt8_col]])),
+      rt = case_when(
+        !is.na(rt9) ~ rt9 * 1000,
+        !is.na(rt8) ~ (3 + rt8) * 1000,
+        TRUE        ~ NA_real_
+      ),
+      event_position    = ((trial_number - 1) %% 7) + 1,
+      boundary_position = factor(
+        case_when(
+          event_position == 1 ~ "Post",
+          event_position == 7 ~ "Pre",
+          TRUE                ~ "Non"
+        ),
+        levels = c("Non", "Pre", "Post")
+      )
+    )
+}
+
+df_both_task <- map_dfr(task_files_1, load_task)
+cat("Unique participants:", n_distinct(df_both_task$participant_id), "\n")
+```
+
+```{r exp1_task_count}
+df_both_task %>%
+  count(boundary_position, name = "Trial Count") %>%
+  kable(caption = "Exp 1: Task Trial Counts by Boundary Position") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 12)
+```
+
+## 1.2 Load Test Data
+
+```{r exp1_test_load}
+# CSV columns:
+#   trials.thisN           -> trial row filter
+#   image_path             -> stimulus path
+#   participant            -> participant ID
+#   trials.key_resp_3.keys -> "o" = Old | "s" = Similar | "n" = New
+# Stimulus type from image name: ^Foils = Foil | b.jpg = Lure | a.jpg = Target
+
+test_files_1 <- list.files(
+  "Both_item_task/both_data", pattern = "_MST_test_.*\\.csv$", full.names = TRUE
+)
+cat("Test files found:", length(test_files_1), "\n")
+
+load_test <- function(file_path) {
+  df <- suppressMessages(read_csv(file_path, show_col_types = FALSE))
+  df %>%
+    filter(!is.na(trials.thisN)) %>%
+    transmute(
+      participant_id = as.character(as.integer(participant)),
+      image_name     = basename(image_path),
+      stimulus_type  = case_when(
+        str_detect(image_name, "(?i)^foils") ~ "Foil",
+        str_detect(image_name, "b\\.jpg$")   ~ "Lure",
+        str_detect(image_name, "a\\.jpg$")   ~ "Target",
+        TRUE                                  ~ NA_character_
+      ),
+      response_type = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE                          ~ NA_character_
+      )
+    )
+}
+
+df_both_test <- map_dfr(test_files_1, load_test)
+cat("Unique participants:", n_distinct(df_both_test$participant_id), "\n")
+cat("Stimulus type counts:\n")
+print(table(df_both_test$stimulus_type, useNA = "always"))
+```
+
+```{r exp1_pid_check}
+cat("In task only:", setdiff(sort(unique(df_both_task$participant_id)),
+                              sort(unique(df_both_test$participant_id))), "\n")
+cat("In test only:", setdiff(sort(unique(df_both_test$participant_id)),
+                              sort(unique(df_both_task$participant_id))), "\n")
+```
+
+```{r exp1_response_table}
+df_both_test %>%
+  filter(!is.na(stimulus_type), !is.na(response_type)) %>%
+  count(stimulus_type, response_type) %>%
+  pivot_wider(names_from = response_type, values_from = n, values_fill = 0) %>%
+  kable(caption = "Exp 1: Test Response Counts by Stimulus Type") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 12)
+```
+
+## 1.3 Join Task and Test
+
+```{r exp1_join}
+df_both_labeled <- df_both_task %>%
+  left_join(
+    df_both_test %>%
+      filter(stimulus_type %in% c("Target", "Lure")) %>%
+      select(participant_id, image_name, stimulus_type, response_type) %>%
+      distinct(),
+    by = c("participant_id", "image_name")
+  ) %>%
+  filter(!is.na(stimulus_type), !is.na(rt)) %>%
+  mutate(
+    stimulus_type     = factor(stimulus_type, levels = c("Target", "Lure")),
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    participant_id    = factor(participant_id)
+  )
+
+cat("Rows after join:", nrow(df_both_labeled), "\n")
+cat("Participants:", n_distinct(df_both_labeled$participant_id), "\n")
+```
+
+```{r exp1_cell_count}
+df_both_labeled %>%
+  count(boundary_position, stimulus_type) %>%
+  pivot_wider(names_from = stimulus_type, values_from = n, values_fill = 0) %>%
+  kable(caption = "Exp 1: RT Cell Counts (Boundary x Trial Type)") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 12)
+```
+
+## 1.4 SAP 2.2 — Normality: Encoding RT
+
+```{r exp1_rt_normality}
+cells_rt_1 <- df_both_labeled %>%
+  group_by(boundary_position, stimulus_type) %>%
+  summarise(vals = list(rt), .groups = "drop") %>%
+  mutate(label = paste(boundary_position, stimulus_type, sep = " | "))
+normality_table(cells_rt_1, "Exp 1: Shapiro-Wilk — Encoding RT by Cell")
+```
+
+```{r exp1_rt_qq, fig.height=8}
+p_qq <- wrap_plots(pmap(list(cells_rt_1$vals, cells_rt_1$label),
+                function(v, lbl) qq_plot(v[!is.na(v)], lbl)), ncol = 3)
+print(p_qq)
+ggsave("figures_report/exp1_rt_qq_plots.png", p_qq, width = 14, height = 10, dpi = 150)
+```
+
+## 1.5 SAP 2.3 / 2.4 — RT Analysis
+
+```{r exp1_rt_analysis}
+rt_analysis(df_both_labeled, "Experiment 1")
+```
+
+## 1.6 RT Descriptives and Plot
+
+```{r exp1_rt_desc}
+summary_table(aggregate_rt(df_both_labeled),
+              c("boundary_position", "stimulus_type"),
+              "mean_rt", "Exp 1: Mean RT per Participant per Cell (ms)")
+```
+
+```{r exp1_rt_plot, fig.height=5}
+# Spaghetti: individual participant lines (grey) + group median + IQR
+# Split by Trial Type to show Boundary x Trial Type pattern
+# spaghetti_grouped(
+#  aggregate_rt(df_both_labeled),
+#  x_var = "boundary_position", y_var = "mean_rt", group_var = "stimulus_type",
+#  title    = "Exp 1: Encoding RT by Boundary Condition",
+#  subtitle = "Thin lines = participants | Bold lines = group median | Range = IQR",
+#  x_lab = "Boundary Position", y_lab = "Mean RT per Participant (ms)"
+#)
+```
+
+## 1.7 SAP 3.1 — REC and LDI
+
+```{r exp1_rec_ldi}
+mst_1 <- df_both_test %>%
+  group_by(participant_id) %>%
+  summarise(
+    p_old_tgt  = mean(stimulus_type == "Target" & response_type == "Old",     na.rm = TRUE),
+    p_old_foil = mean(stimulus_type == "Foil"   & response_type == "Old",     na.rm = TRUE),
+    p_sim_lure = mean(stimulus_type == "Lure"   & response_type == "Similar", na.rm = TRUE),
+    p_sim_foil = mean(stimulus_type == "Foil"   & response_type == "Similar", na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(REC = p_old_tgt - p_old_foil,
+         LDI = p_sim_lure - p_sim_foil)
+
+mst_1 %>% select(participant_id, REC, LDI) %>%
+  mutate(across(c(REC, LDI), ~ round(.x, 3))) %>%
+  write_csv("figures_report/exp1_rec_ldi_participant.csv") %>%
+  kable(caption = "Exp 1: Per-Participant REC and LDI") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 12)
+
+mst_1 %>%
+  summarise(REC_Median = round(median(REC), 3), REC_IQR = round(IQR(REC), 3),
+            LDI_Median = round(median(LDI), 3), LDI_IQR = round(IQR(LDI), 3)) %>%
+  write_csv("figures_report/exp1_rec_ldi_group.csv") %>%
+  kable(caption = "Exp 1: Group REC and LDI") %>%
+  kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 12)
+
+p_rec_ldi <- rec_ldi_plot(mst_1, "REC", "LDI", "Exp 1: REC and LDI")
+print(p_rec_ldi)
+ggsave("figures_report/exp1_rec_ldi_plot.png", p_rec_ldi, width = 6, height = 5, dpi = 150)
+```
+
+## 1.8 SAP 3.2 / 4 — Memory Accuracy by Boundary Condition
+
+```{r exp1_accuracy}
+bp_1 <- df_both_test %>%
+  left_join(df_both_task %>%
+              select(participant_id, image_name, boundary_position) %>%
+              distinct(),
+            by = c("participant_id", "image_name")) %>%
+  filter(stimulus_type %in% c("Target", "Lure"), !is.na(boundary_position)) %>%
+  mutate(
+    boundary_position = factor(boundary_position, levels = c("Non", "Pre", "Post")),
+    lure_correct      = (stimulus_type == "Lure"   & response_type == "Similar"),
+    target_hit        = (stimulus_type == "Target" & response_type == "Old")
+  ) %>%
+  group_by(participant_id, boundary_position) %>%
+  summarise(lure_CR    = mean(lure_correct, na.rm = TRUE),
+            target_hit = mean(target_hit,   na.rm = TRUE),
+            .groups    = "drop")
+
+cat("Participants in accuracy data:", n_distinct(bp_1$participant_id), "\n")
+```
+
+```{r exp1_acc_normality}
+normality_table(
+  bp_1 %>% group_by(boundary_position) %>%
+    summarise(vals = list(lure_CR), .groups = "drop") %>%
+    mutate(label = paste("Lure CR |", boundary_position)),
+  "Exp 1: Shapiro-Wilk — Lure CR by Boundary"
+)
+normality_table(
+  bp_1 %>% group_by(boundary_position) %>%
+    summarise(vals = list(target_hit), .groups = "drop") %>%
+    mutate(label = paste("Target Hit |", boundary_position)),
+  "Exp 1: Shapiro-Wilk — Target Hit by Boundary"
+)
+```
+
+```{r exp1_acc_desc}
+summary_table(bp_1, "boundary_position", "lure_CR",
+              "Exp 1: Lure Correct Rejection Rate")
+summary_table(bp_1, "boundary_position", "target_hit",
+              "Exp 1: Target Hit Rate")
+```
+
+```{r exp1_acc_plot, fig.width=11, fig.height=5}
+# Spaghetti plots: grey = individual participants, blue = group median + IQR band
+# p1a <- spaghetti_plot(bp_1, "boundary_position", "lure_CR",
+#                      title    = "Lure Correct Rejection",
+#                      subtitle = "Thin = participants | Bold = median + IQR",
+#                      x_lab = "Boundary Position", y_lab = "Proportion Correct")
+# p1b <- spaghetti_plot(bp_1, "boundary_position", "target_hit",
+#                     title    = "Target Hit Rate",
+#                      subtitle = "Thin = participants | Bold = median + IQR",
+#                      x_lab = "Boundary Position", y_lab = "Proportion Correct")
+# (p1a | p1b) +
+#  plot_annotation(title = "Exp 1: Memory Accuracy by Boundary Condition")
+```
+
+## 1.9 SAP 5 / 6 — Repeated-Measures Analysis + Post-Hoc
+
+```{r exp1_rm}
+# SAP 5 requires RM analysis for: lure_CR, target_hit, REC, and LDI
+# REC and LDI are participant-level scalars (not broken by boundary) so
+# RM analysis across boundary conditions cannot be run for them here.
+# They are reported descriptively in section 1.7 above.
+# If a boundary-stratified REC/LDI is computed in future, run rm_analysis() on those.
+
+rm_analysis(bp_1, "lure_CR",    label = "Exp 1: Lure CR")
+rm_analysis(bp_1, "target_hit", label = "Exp 1: Target Hit")
+```
+
+## 1.10 SAP 7 / 7.1 — Boundary vs Baseline Difference Scores
+
+```{r exp1_diff}
+# diff_1 <- compute_diff_scores(bp_1)
+
+# diff_1 %>%
+#   select(participant_id, lure_pre_diff, lure_post_diff,
+#          target_pre_diff, target_post_diff) %>%
+#   mutate(across(where(is.numeric), ~ round(.x, 3))) %>%
+#   kable(caption = "Exp 1: Difference Scores per Participant") %>%
+#   kable_styling(bootstrap_options = c("striped","hover"), full_width = FALSE, font_size = 11)
+
+# one_sample_test_adaptive(diff_1$lure_pre_diff,    "Lure CR: Pre - Non (Exp 1)")
+# one_sample_test_adaptive(diff_1$lure_post_diff,   "Lure CR: Post - Non (Exp 1)")
+# one_sample_test_adaptive(diff_1$target_pre_diff,  "Target Hit: Pre - Non (Exp 1)")
+# one_sample_test_adaptive(diff_1$target_post_diff, "Target Hit: Post - Non (Exp 1)")
+```
+
+```{r exp1_diff_plot, fig.height=5}
+# diff_score_plot(diff_1, "Exp 1: Difference Scores Relative to Non-Boundary Baseline")
+```
+
+## 1.11 SAP 8 — Pre vs Post: Paired Test
+
+```{r exp1_paired}
+# paired_test_adaptive(bp_1, "lure_CR",    "Exp 1: Lure CR")
+# paired_test_adaptive(bp_1, "target_hit", "Exp 1: Target Hit")
+```
+
+## 1.12 SAP 9 — Linear Mixed-Effects Model
+
+```{r exp1_lme}
+run_lme_trial(df_both_labeled, "Exp 1")
+```
+
+## 1.13 SAP 10 — Lure Similarity Bin Analysis
+
+```{r exp1_bins}
+lure_bin_analysis(df_both_test, df_both_task, "Exp 1")
+```
