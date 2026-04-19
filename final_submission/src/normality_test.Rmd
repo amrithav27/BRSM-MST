@@ -1,0 +1,51 @@
+---
+title: "Project Phase 2- Preliminary Analysis"
+author: "Team Popcorn - Amritha, Ahana, Keerthana"
+date: "05/3/2026"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    highlight: tango
+    latex_engine: xelatex
+  
+---
+# So we have three tasks in the MST_Data folder 
+├── Both_item_task/
+│   └── both_data/                # Data files for Experiment 1
+├── item_only/
+│   └── item_only_data/           # Data files for Experiment 2
+├── task_only/
+│   └── task_only_data/           # Data files for Experiment 3
+
+# Dataset Description
+
+The dataset used in this study is organized into three experimental conditions of the Mnemonic Similarity Task (MST): **Both Item + Task**, **Item-only**, and **Task-only**. Each condition is stored in a separate directory within the `MST_Data` folder.
+
+Within each condition, the data is structured at the participant level. For every participant, there are two CSV files corresponding to the two phases of the experiment:
+
+* a **task file**, representing the encoding (study) phase
+* a **test file**, representing the retrieval (memory test) phase
+
+The files follow a consistent naming convention of the form:
+`<subjectID>_MST_<phase>_<date>_<timestamp>.csv`,
+where the subject ID uniquely identifies each participant and the phase indicates whether the file corresponds to the encoding or test stage.
+
+The task files primarily contain information related to stimulus presentation and encoding responses, including image paths, trial indices, and key responses recorded during the study phase.
+
+The test files contain trial-level behavioral data used for analysis, including:
+
+stimulus identity (e.g., scene or object images)
+stimulus condition (e.g., target, lure, foil — inferred from stimulus position/type)
+participant responses (e.g., old, similar, new)
+reaction times associated with each response
+
+From these test-phase variables, key behavioral measures are computed:
+
+LDI (Lure Discrimination Index), reflecting the ability to distinguish similar items
+REC (Recognition Score), reflecting general recognition performance
+Reaction Time (RT), capturing response latency
+
+The dataset is structured such that each participant contributes multiple trials, enabling within-subject analysis of memory performance across different stimulus types.
+
+

@@ -1,0 +1,1676 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Project Phase 1 Analysis EXP1},
+  pdfauthor={Team Popcorn - Amritha, Ahana, Keerthana},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Project Phase 1 Analysis EXP1}
+\author{Team Popcorn - Amritha, Ahana, Keerthana}
+\date{05/3/2026}
+
+\begin{document}
+\maketitle
+
+{
+\setcounter{tocdepth}{3}
+\tableofcontents
+}
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Helper Functions}\label{helper-functions}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# =============================================================================}
+\CommentTok{\# NORMALITY  (SAP 2.2 / 4 / 7.1)}
+\CommentTok{\# Input:  cells\_df with columns $vals (list of numeric vectors) and $label}
+\CommentTok{\# Output: formatted kable of Shapiro{-}Wilk results}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{normality\_table }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(cells\_df, }\AttributeTok{caption\_text =} \StringTok{"Shapiro{-}Wilk Results"}\NormalTok{) \{}
+\NormalTok{  purrr}\SpecialCharTok{::}\FunctionTok{map\_dfr}\NormalTok{(}\FunctionTok{seq\_len}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(cells\_df)), }\ControlFlowTok{function}\NormalTok{(i) \{}
+\NormalTok{    v }\OtherTok{\textless{}{-}}\NormalTok{ cells\_df}\SpecialCharTok{$}\NormalTok{vals[[i]]}
+\NormalTok{    v }\OtherTok{\textless{}{-}}\NormalTok{ v[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(v)]}
+    \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(v) }\SpecialCharTok{\textless{}} \DecValTok{3}\NormalTok{)}
+      \FunctionTok{return}\NormalTok{(}\FunctionTok{tibble}\NormalTok{(}\AttributeTok{Condition =}\NormalTok{ cells\_df}\SpecialCharTok{$}\NormalTok{label[i], }\AttributeTok{n =} \FunctionTok{length}\NormalTok{(v),}
+                    \AttributeTok{W =} \ConstantTok{NA\_real\_}\NormalTok{, }\AttributeTok{p =} \ConstantTok{NA\_real\_}\NormalTok{, }\AttributeTok{Normal =} \StringTok{"Too few"}\NormalTok{))}
+    \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{sd}\NormalTok{(v) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{)}
+      \FunctionTok{return}\NormalTok{(}\FunctionTok{tibble}\NormalTok{(}\AttributeTok{Condition =}\NormalTok{ cells\_df}\SpecialCharTok{$}\NormalTok{label[i], }\AttributeTok{n =} \FunctionTok{length}\NormalTok{(v),}
+                    \AttributeTok{W =} \ConstantTok{NA\_real\_}\NormalTok{, }\AttributeTok{p =} \ConstantTok{NA\_real\_}\NormalTok{, }\AttributeTok{Normal =} \StringTok{"Identical values"}\NormalTok{))}
+\NormalTok{    sw }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(v)}
+    \FunctionTok{tibble}\NormalTok{(}\AttributeTok{Condition =}\NormalTok{ cells\_df}\SpecialCharTok{$}\NormalTok{label[i], }\AttributeTok{n =} \FunctionTok{length}\NormalTok{(v),}
+           \AttributeTok{W =} \FunctionTok{round}\NormalTok{(sw}\SpecialCharTok{$}\NormalTok{statistic, }\DecValTok{4}\NormalTok{), }\AttributeTok{p =} \FunctionTok{round}\NormalTok{(sw}\SpecialCharTok{$}\NormalTok{p.value, }\DecValTok{4}\NormalTok{),}
+           \AttributeTok{Normal =} \FunctionTok{ifelse}\NormalTok{(sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}\NormalTok{, }\StringTok{"Yes"}\NormalTok{, }\StringTok{"No"}\NormalTok{))}
+\NormalTok{  \}) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =}\NormalTok{ caption\_text, }\AttributeTok{align =} \StringTok{"lrrrr"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hover"}\NormalTok{, }\StringTok{"condensed"}\NormalTok{),}
+                  \AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# DESCRIPTIVE TABLE}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{summary\_table }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, group\_vars, dv,}
+                          \AttributeTok{caption\_text =} \StringTok{"Descriptive Statistics"}\NormalTok{) \{}
+\NormalTok{  df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(group\_vars))) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{n      =} \FunctionTok{sum}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(.data[[dv]])),}
+              \AttributeTok{Median =} \FunctionTok{round}\NormalTok{(}\FunctionTok{median}\NormalTok{(.data[[dv]], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{3}\NormalTok{),}
+              \AttributeTok{Mean   =} \FunctionTok{round}\NormalTok{(}\FunctionTok{mean}\NormalTok{(.data[[dv]],   }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{3}\NormalTok{),}
+              \AttributeTok{SD     =} \FunctionTok{round}\NormalTok{(}\FunctionTok{sd}\NormalTok{(.data[[dv]],     }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{3}\NormalTok{),}
+              \AttributeTok{IQR    =} \FunctionTok{round}\NormalTok{(}\FunctionTok{IQR}\NormalTok{(.data[[dv]],    }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\DecValTok{3}\NormalTok{),}
+              \AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =}\NormalTok{ caption\_text, }\AttributeTok{align =} \StringTok{"llrrrrr"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{, }\StringTok{"hover"}\NormalTok{, }\StringTok{"condensed"}\NormalTok{),}
+                  \AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAFE NON{-}PARAMETRIC WRAPPERS}
+\CommentTok{\# Guard against single{-}group crashes}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{safe\_kruskal }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(values, groups, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+\NormalTok{  grp    }\OtherTok{\textless{}{-}} \FunctionTok{droplevels}\NormalTok{(}\FunctionTok{as.factor}\NormalTok{(groups))}
+\NormalTok{  n\_grps }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(}\FunctionTok{tapply}\NormalTok{(values, grp, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(x))) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{ (n\_grps }\SpecialCharTok{\textless{}} \DecValTok{2}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"  Skipped {-} fewer than 2 groups with data:"}\NormalTok{, label, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+  \FunctionTok{print}\NormalTok{(}\FunctionTok{kruskal.test}\NormalTok{(values }\SpecialCharTok{\textasciitilde{}}\NormalTok{ grp))}
+\NormalTok{\}}
+
+\NormalTok{safe\_pairwise\_wilcox }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(values, groups, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+\NormalTok{  grp    }\OtherTok{\textless{}{-}} \FunctionTok{droplevels}\NormalTok{(}\FunctionTok{as.factor}\NormalTok{(groups))}
+\NormalTok{  n\_grps }\OtherTok{\textless{}{-}} \FunctionTok{sum}\NormalTok{(}\FunctionTok{tapply}\NormalTok{(values, grp, }\ControlFlowTok{function}\NormalTok{(x) }\FunctionTok{sum}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(x))) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{ (n\_grps }\SpecialCharTok{\textless{}} \DecValTok{2}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"  Skipped {-} fewer than 2 groups with data:"}\NormalTok{, label, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+  \FunctionTok{print}\NormalTok{(}\FunctionTok{pairwise.wilcox.test}\NormalTok{(values, grp,}
+                              \AttributeTok{p.adjust.method =} \StringTok{"bonferroni"}\NormalTok{, }\AttributeTok{exact =} \ConstantTok{FALSE}\NormalTok{))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 2.1  Aggregate RT to per{-}participant means per Boundary x Trial Type}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{aggregate\_rt }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df) \{}
+\NormalTok{  df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(participant\_id, boundary\_position, stimulus\_type) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{mean\_rt =} \FunctionTok{mean}\NormalTok{(rt, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{stimulus\_type =} \FunctionTok{as.character}\NormalTok{(stimulus\_type))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 2.3 / 2.4  Two{-}way RT analysis (parametric preferred, non{-}parametric fallback)}
+\CommentTok{\#}
+\CommentTok{\# The SAP asks for a two{-}way ANOVA (Boundary Position x Trial Type) with Tukey}
+\CommentTok{\# HSD post{-}hoc. We first check whether per{-}participant means are normal using}
+\CommentTok{\# Shapiro{-}Wilk. If normal {-}\textgreater{} two{-}way ANOVA + Tukey HSD (SAP 2.4).}
+\CommentTok{\# If non{-}normal {-}\textgreater{} Kruskal{-}Wallis for each main effect + paired Wilcoxon for}
+\CommentTok{\# Trial Type + within{-}type KW as an interaction proxy.}
+\CommentTok{\#}
+\CommentTok{\# }\AlertTok{NOTE}\CommentTok{ ON INTERACTION (non{-}parametric path):}
+\CommentTok{\# There is no single non{-}parametric equivalent of a 2{-}way ANOVA interaction.}
+\CommentTok{\# The within{-}type KW tests (Boundary within Target, Boundary within Lure) serve}
+\CommentTok{\# as an approximate interaction check: if the KW result differs markedly across}
+\CommentTok{\# trial types, this suggests a boundary x trial{-}type interaction.}
+\CommentTok{\# For a formal non{-}parametric interaction test, install the ARTool package and}
+\CommentTok{\# uncomment the block at the end of this function.}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{rt\_analysis }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, }\AttributeTok{exp\_label =} \StringTok{""}\NormalTok{) \{}
+\NormalTok{  rt\_agg }\OtherTok{\textless{}{-}} \FunctionTok{aggregate\_rt}\NormalTok{(df)}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{==="}\NormalTok{, exp\_label, }\StringTok{": RT Analysis (SAP 2.3 / 2.4) ===}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"N participants:"}\NormalTok{, }\FunctionTok{n\_distinct}\NormalTok{(rt\_agg}\SpecialCharTok{$}\NormalTok{participant\_id), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+  \CommentTok{\# Normality check on per{-}participant cell means}
+\NormalTok{  all\_vals }\OtherTok{\textless{}{-}}\NormalTok{ rt\_agg}\SpecialCharTok{$}\NormalTok{mean\_rt[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(rt\_agg}\SpecialCharTok{$}\NormalTok{mean\_rt)]}
+\NormalTok{  normal   }\OtherTok{\textless{}{-}} \ConstantTok{FALSE}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(all\_vals) }\SpecialCharTok{\textgreater{}=} \DecValTok{3} \SpecialCharTok{\&\&} \FunctionTok{sd}\NormalTok{(all\_vals) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) \{}
+\NormalTok{    sw     }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(all\_vals)}
+\NormalTok{    normal }\OtherTok{\textless{}{-}}\NormalTok{ sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}
+    \FunctionTok{cat}\NormalTok{(}\FunctionTok{sprintf}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{Shapiro{-}Wilk on cell means: W = \%.4f, p = \%.4f {-}\textgreater{} \%s}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{,}
+\NormalTok{                sw}\SpecialCharTok{$}\NormalTok{statistic, sw}\SpecialCharTok{$}\NormalTok{p.value,}
+                \FunctionTok{ifelse}\NormalTok{(normal, }\StringTok{"Normal {-}\textgreater{} two{-}way ANOVA"}\NormalTok{, }\StringTok{"Non{-}normal {-}\textgreater{} KW fallback"}\NormalTok{)))}
+\NormalTok{  \}}
+
+  \ControlFlowTok{if}\NormalTok{ (normal) \{}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \CommentTok{\# PARAMETRIC PATH: Two{-}way ANOVA + Tukey HSD  (SAP 2.3 / 2.4)}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Two{-}Way ANOVA: RT \textasciitilde{} Boundary Position x Trial Type {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    rt\_wide }\OtherTok{\textless{}{-}}\NormalTok{ rt\_agg }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{mutate}\NormalTok{(}\AttributeTok{boundary\_position =} \FunctionTok{factor}\NormalTok{(boundary\_position, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{,}\StringTok{"Pre"}\NormalTok{,}\StringTok{"Post"}\NormalTok{)),}
+             \AttributeTok{stimulus\_type     =} \FunctionTok{factor}\NormalTok{(stimulus\_type,     }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Target"}\NormalTok{,}\StringTok{"Lure"}\NormalTok{)))}
+\NormalTok{    m\_aov }\OtherTok{\textless{}{-}} \FunctionTok{aov}\NormalTok{(mean\_rt }\SpecialCharTok{\textasciitilde{}}\NormalTok{ boundary\_position }\SpecialCharTok{*}\NormalTok{ stimulus\_type }\SpecialCharTok{+}
+                   \FunctionTok{Error}\NormalTok{(participant\_id }\SpecialCharTok{/}\NormalTok{ (boundary\_position }\SpecialCharTok{*}\NormalTok{ stimulus\_type)),}
+                 \AttributeTok{data =}\NormalTok{ rt\_wide)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{summary}\NormalTok{(m\_aov))}
+
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Tukey HSD: Boundary Position post{-}hoc (SAP 2.4) {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \CommentTok{\# Tukey on boundary position collapsed across trial type}
+\NormalTok{    m\_simple }\OtherTok{\textless{}{-}} \FunctionTok{aov}\NormalTok{(mean\_rt }\SpecialCharTok{\textasciitilde{}}\NormalTok{ boundary\_position }\SpecialCharTok{+} \FunctionTok{Error}\NormalTok{(participant\_id }\SpecialCharTok{/}\NormalTok{ boundary\_position),}
+                    \AttributeTok{data =}\NormalTok{ rt\_wide)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{TukeyHSD}\NormalTok{(}\FunctionTok{aov}\NormalTok{(mean\_rt }\SpecialCharTok{\textasciitilde{}}\NormalTok{ boundary\_position, }\AttributeTok{data =}\NormalTok{ rt\_wide)))}
+
+\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \CommentTok{\# NON{-}PARAMETRIC FALLBACK}
+    \CommentTok{\# Main Effect: Boundary Position (KW on per{-}participant means)}
+    \CommentTok{\# Main Effect: Trial Type (paired Wilcoxon, same participants)}
+    \CommentTok{\# Interaction proxy: KW within Target, KW within Lure}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Kruskal{-}Wallis: Main Effect of Boundary Position {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{safe\_kruskal}\NormalTok{(rt\_agg}\SpecialCharTok{$}\NormalTok{mean\_rt, rt\_agg}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Boundary Position"}\NormalTok{)}
+
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Bonferroni Pairwise Wilcoxon: Boundary Position (SAP 2.4 fallback) {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{safe\_pairwise\_wilcox}\NormalTok{(rt\_agg}\SpecialCharTok{$}\NormalTok{mean\_rt, rt\_agg}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Boundary Position"}\NormalTok{)}
+
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Paired Wilcoxon: Main Effect of Trial Type (Target vs Lure) {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    tt\_wide }\OtherTok{\textless{}{-}}\NormalTok{ rt\_agg }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{group\_by}\NormalTok{(participant\_id, stimulus\_type) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{summarise}\NormalTok{(}\AttributeTok{mean\_rt =} \FunctionTok{mean}\NormalTok{(mean\_rt, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ stimulus\_type, }\AttributeTok{values\_from =}\NormalTok{ mean\_rt)}
+
+    \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{all}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\StringTok{"Target"}\NormalTok{, }\StringTok{"Lure"}\NormalTok{) }\SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(tt\_wide))) \{}
+      \FunctionTok{cat}\NormalTok{(}\StringTok{"  Skipped: Target and/or Lure column absent.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+      \FunctionTok{cat}\NormalTok{(}\StringTok{"  Columns:"}\NormalTok{, }\FunctionTok{paste}\NormalTok{(}\FunctionTok{names}\NormalTok{(tt\_wide), }\AttributeTok{collapse =} \StringTok{", "}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    \} }\ControlFlowTok{else}\NormalTok{ \{}
+\NormalTok{      tt\_wide }\OtherTok{\textless{}{-}}\NormalTok{ tt\_wide }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(.data[[}\StringTok{"Target"}\NormalTok{]]), }\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(.data[[}\StringTok{"Lure"}\NormalTok{]]))}
+      \FunctionTok{cat}\NormalTok{(}\StringTok{"  Complete pairs:"}\NormalTok{, }\FunctionTok{nrow}\NormalTok{(tt\_wide), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+      \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(tt\_wide) }\SpecialCharTok{\textgreater{}=} \DecValTok{3}\NormalTok{)}
+        \FunctionTok{print}\NormalTok{(}\FunctionTok{wilcox.test}\NormalTok{(tt\_wide}\SpecialCharTok{$}\NormalTok{Target, tt\_wide}\SpecialCharTok{$}\NormalTok{Lure, }\AttributeTok{paired =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{exact =} \ConstantTok{FALSE}\NormalTok{))}
+      \ControlFlowTok{else}
+        \FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few complete pairs.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    \}}
+
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Interaction Proxy: Boundary within Target {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    df\_tgt }\OtherTok{\textless{}{-}}\NormalTok{ rt\_agg }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Target"}\NormalTok{)}
+    \FunctionTok{safe\_kruskal}\NormalTok{(df\_tgt}\SpecialCharTok{$}\NormalTok{mean\_rt, df\_tgt}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Target boundary"}\NormalTok{)}
+    \FunctionTok{safe\_pairwise\_wilcox}\NormalTok{(df\_tgt}\SpecialCharTok{$}\NormalTok{mean\_rt, df\_tgt}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Target boundary"}\NormalTok{)}
+
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Interaction Proxy: Boundary within Lure {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    df\_lure }\OtherTok{\textless{}{-}}\NormalTok{ rt\_agg }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}\NormalTok{)}
+    \FunctionTok{safe\_kruskal}\NormalTok{(df\_lure}\SpecialCharTok{$}\NormalTok{mean\_rt, df\_lure}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Lure boundary"}\NormalTok{)}
+    \FunctionTok{safe\_pairwise\_wilcox}\NormalTok{(df\_lure}\SpecialCharTok{$}\NormalTok{mean\_rt, df\_lure}\SpecialCharTok{$}\NormalTok{boundary\_position, }\StringTok{"Lure boundary"}\NormalTok{)}
+\NormalTok{  \}}
+
+  \CommentTok{\# ============================================================}
+  \CommentTok{\# COMMENTED OUT: Aligned Ranks Transformation ANOVA}
+  \CommentTok{\# Proper non{-}parametric 2{-}way interaction test.}
+  \CommentTok{\# Requires: install.packages("ARTool")}
+  \CommentTok{\#}
+  \CommentTok{\# library(ARTool)}
+  \CommentTok{\# rt\_art \textless{}{-} rt\_agg \%\textgreater{}\%}
+  \CommentTok{\#   mutate(boundary\_position = factor(boundary\_position),}
+  \CommentTok{\#          stimulus\_type     = factor(stimulus\_type),}
+  \CommentTok{\#          participant\_id    = factor(participant\_id))}
+  \CommentTok{\# m\_art \textless{}{-} art(mean\_rt \textasciitilde{} boundary\_position * stimulus\_type +}
+  \CommentTok{\#                Error(participant\_id), data = rt\_art)}
+  \CommentTok{\# print(anova(m\_art))}
+  \CommentTok{\# ============================================================}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 5 / 6  Repeated{-}measures test (Friedman if non{-}normal) + Bonferroni post{-}hoc}
+\CommentTok{\#}
+\CommentTok{\# SAP 5 asks for RM{-}ANOVA on: lure\_CR, target\_hit, REC, LDI}
+\CommentTok{\# RM{-}ANOVA requires normality. If violated {-}\textgreater{} Friedman test.}
+\CommentTok{\# SAP 6: Bonferroni{-}corrected pairwise comparisons.}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{rm\_analysis }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, dv, }\AttributeTok{pid\_var =} \StringTok{"participant\_id"}\NormalTok{,}
+                         \AttributeTok{within\_var =} \StringTok{"boundary\_position"}\NormalTok{, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-}"}\NormalTok{, label, }\StringTok{": RM Analysis (SAP 5 / 6) {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+  \CommentTok{\# Collapse any duplicate participant x boundary rows to a single mean}
+\NormalTok{  df\_agg }\OtherTok{\textless{}{-}}\NormalTok{ df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(.data[[pid\_var]], .data[[within\_var]]) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(dv), }\SpecialCharTok{\textasciitilde{}} \FunctionTok{mean}\NormalTok{(.x, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{)), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{)}
+
+\NormalTok{  complete\_pids }\OtherTok{\textless{}{-}}\NormalTok{ df\_agg }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(.data[[pid\_var]]) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{n\_lev =} \FunctionTok{n\_distinct}\NormalTok{(.data[[within\_var]]), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(n\_lev }\SpecialCharTok{==} \DecValTok{3}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{pull}\NormalTok{(.data[[pid\_var]])}
+
+\NormalTok{  df\_c      }\OtherTok{\textless{}{-}}\NormalTok{ df\_agg }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(.data[[pid\_var]] }\SpecialCharTok{\%in\%}\NormalTok{ complete\_pids) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{droplevels}\NormalTok{()}
+\NormalTok{  n\_kept    }\OtherTok{\textless{}{-}} \FunctionTok{length}\NormalTok{(complete\_pids)}
+\NormalTok{  n\_dropped }\OtherTok{\textless{}{-}} \FunctionTok{n\_distinct}\NormalTok{(df[[pid\_var]]) }\SpecialCharTok{{-}}\NormalTok{ n\_kept}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"  Participants included:"}\NormalTok{, n\_kept, }\StringTok{"| Dropped (incomplete):"}\NormalTok{, n\_dropped, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+  \ControlFlowTok{if}\NormalTok{ (n\_kept }\SpecialCharTok{\textless{}} \DecValTok{3}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few complete participants.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{); }\FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+
+\NormalTok{  wide }\OtherTok{\textless{}{-}}\NormalTok{ df\_c }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{select}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(}\FunctionTok{c}\NormalTok{(pid\_var, within\_var, dv))) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =} \FunctionTok{all\_of}\NormalTok{(within\_var), }\AttributeTok{values\_from =} \FunctionTok{all\_of}\NormalTok{(dv),}
+                \AttributeTok{values\_fn =}\NormalTok{ mean)}
+
+  \CommentTok{\# Normality check on the DV values}
+\NormalTok{  all\_vals }\OtherTok{\textless{}{-}}\NormalTok{ df\_c[[dv]]}
+\NormalTok{  normal   }\OtherTok{\textless{}{-}} \ConstantTok{FALSE}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(all\_vals[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(all\_vals)]) }\SpecialCharTok{\textgreater{}=} \DecValTok{3} \SpecialCharTok{\&\&} \FunctionTok{sd}\NormalTok{(all\_vals, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) \{}
+\NormalTok{    sw     }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(all\_vals[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(all\_vals)])}
+\NormalTok{    normal }\OtherTok{\textless{}{-}}\NormalTok{ sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}
+    \FunctionTok{cat}\NormalTok{(}\FunctionTok{sprintf}\NormalTok{(}\StringTok{"  Shapiro{-}Wilk: W = \%.4f, p = \%.4f {-}\textgreater{} \%s}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{,}
+\NormalTok{                sw}\SpecialCharTok{$}\NormalTok{statistic, sw}\SpecialCharTok{$}\NormalTok{p.value,}
+                \FunctionTok{ifelse}\NormalTok{(normal, }\StringTok{"Normal {-}\textgreater{} RM{-}ANOVA"}\NormalTok{, }\StringTok{"Non{-}normal {-}\textgreater{} Friedman"}\NormalTok{)))}
+\NormalTok{  \}}
+
+  \ControlFlowTok{if}\NormalTok{ (normal) \{}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \CommentTok{\# RM{-}ANOVA (parametric, SAP 5)}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"  Running one{-}way RM{-}ANOVA...}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    df\_c[[within\_var]] }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(df\_c[[within\_var]], }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{,}\StringTok{"Pre"}\NormalTok{,}\StringTok{"Post"}\NormalTok{))}
+\NormalTok{    df\_c[[pid\_var]]    }\OtherTok{\textless{}{-}} \FunctionTok{factor}\NormalTok{(df\_c[[pid\_var]])}
+\NormalTok{    m\_rm }\OtherTok{\textless{}{-}} \FunctionTok{aov}\NormalTok{(}\FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(dv, }\StringTok{"\textasciitilde{}"}\NormalTok{, within\_var,}
+                                  \StringTok{"+ Error("}\NormalTok{, pid\_var, }\StringTok{"/"}\NormalTok{, within\_var, }\StringTok{")"}\NormalTok{)),}
+                \AttributeTok{data =}\NormalTok{ df\_c)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{summary}\NormalTok{(m\_rm))}
+
+    \CommentTok{\# Bonferroni post{-}hoc via pairwise t{-}tests (SAP 6)}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{  Bonferroni pairwise t{-}tests (SAP 6):}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    lvls }\OtherTok{\textless{}{-}} \FunctionTok{levels}\NormalTok{(}\FunctionTok{droplevels}\NormalTok{(}\FunctionTok{as.factor}\NormalTok{(df\_c[[within\_var]])))}
+\NormalTok{    results\_rm }\OtherTok{\textless{}{-}} \FunctionTok{map\_dfr}\NormalTok{(}\FunctionTok{combn}\NormalTok{(lvls, }\DecValTok{2}\NormalTok{, }\AttributeTok{simplify =} \ConstantTok{FALSE}\NormalTok{), }\ControlFlowTok{function}\NormalTok{(pair) \{}
+\NormalTok{      x1 }\OtherTok{\textless{}{-}}\NormalTok{ df\_c[[dv]][}\FunctionTok{as.character}\NormalTok{(df\_c[[within\_var]]) }\SpecialCharTok{==}\NormalTok{ pair[}\DecValTok{1}\NormalTok{]]}
+\NormalTok{      x2 }\OtherTok{\textless{}{-}}\NormalTok{ df\_c[[dv]][}\FunctionTok{as.character}\NormalTok{(df\_c[[within\_var]]) }\SpecialCharTok{==}\NormalTok{ pair[}\DecValTok{2}\NormalTok{]]}
+\NormalTok{      tt }\OtherTok{\textless{}{-}} \FunctionTok{t.test}\NormalTok{(x1, x2, }\AttributeTok{paired =} \ConstantTok{FALSE}\NormalTok{)}
+      \FunctionTok{tibble}\NormalTok{(}\AttributeTok{Comparison =} \FunctionTok{paste}\NormalTok{(pair[}\DecValTok{1}\NormalTok{], }\StringTok{"vs"}\NormalTok{, pair[}\DecValTok{2}\NormalTok{]),}
+             \AttributeTok{t =} \FunctionTok{round}\NormalTok{(tt}\SpecialCharTok{$}\NormalTok{statistic, }\DecValTok{3}\NormalTok{), }\AttributeTok{p\_raw =} \FunctionTok{round}\NormalTok{(tt}\SpecialCharTok{$}\NormalTok{p.value, }\DecValTok{4}\NormalTok{))}
+\NormalTok{    \}) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{mutate}\NormalTok{(}\AttributeTok{p\_bonferroni =} \FunctionTok{round}\NormalTok{(}\FunctionTok{p.adjust}\NormalTok{(p\_raw, }\StringTok{"bonferroni"}\NormalTok{), }\DecValTok{4}\NormalTok{),}
+             \AttributeTok{Significant  =} \FunctionTok{ifelse}\NormalTok{(p\_bonferroni }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{, }\StringTok{"Yes"}\NormalTok{, }\StringTok{"No"}\NormalTok{))}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{kable}\NormalTok{(results\_rm,}
+                \AttributeTok{caption =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Bonferroni Post{-}Hoc {-}"}\NormalTok{, label),}
+                \AttributeTok{align =} \StringTok{"lrrrc"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+            \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{,}\StringTok{"condensed"}\NormalTok{),}
+                          \AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{))}
+
+\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+    \CommentTok{\# FRIEDMAN }\AlertTok{TEST}\CommentTok{ (non{-}parametric fallback, SAP 5)}
+    \CommentTok{\# {-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+\NormalTok{    mat }\OtherTok{\textless{}{-}}\NormalTok{ wide }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{all\_of}\NormalTok{(pid\_var)) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{as.matrix}\NormalTok{()}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{friedman.test}\NormalTok{(mat))}
+
+    \CommentTok{\# Bonferroni pairwise Wilcoxon (SAP 6)}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{  Bonferroni pairwise Wilcoxon (SAP 6):}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    long      }\OtherTok{\textless{}{-}}\NormalTok{ df\_c }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(}\FunctionTok{c}\NormalTok{(pid\_var, within\_var, dv)))}
+\NormalTok{    levels\_bp }\OtherTok{\textless{}{-}} \FunctionTok{levels}\NormalTok{(}\FunctionTok{droplevels}\NormalTok{(}\FunctionTok{as.factor}\NormalTok{(df\_c[[within\_var]])))}
+\NormalTok{    results\_fw }\OtherTok{\textless{}{-}} \FunctionTok{map\_dfr}\NormalTok{(}\FunctionTok{combn}\NormalTok{(levels\_bp, }\DecValTok{2}\NormalTok{, }\AttributeTok{simplify =} \ConstantTok{FALSE}\NormalTok{), }\ControlFlowTok{function}\NormalTok{(pair) \{}
+\NormalTok{      x1 }\OtherTok{\textless{}{-}}\NormalTok{ long[[dv]][}\FunctionTok{as.character}\NormalTok{(long[[within\_var]]) }\SpecialCharTok{==}\NormalTok{ pair[}\DecValTok{1}\NormalTok{]]}
+\NormalTok{      x2 }\OtherTok{\textless{}{-}}\NormalTok{ long[[dv]][}\FunctionTok{as.character}\NormalTok{(long[[within\_var]]) }\SpecialCharTok{==}\NormalTok{ pair[}\DecValTok{2}\NormalTok{]]}
+\NormalTok{      wt }\OtherTok{\textless{}{-}} \FunctionTok{wilcox.test}\NormalTok{(x1, x2, }\AttributeTok{paired =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{exact =} \ConstantTok{FALSE}\NormalTok{)}
+      \FunctionTok{tibble}\NormalTok{(}\AttributeTok{Comparison =} \FunctionTok{paste}\NormalTok{(pair[}\DecValTok{1}\NormalTok{], }\StringTok{"vs"}\NormalTok{, pair[}\DecValTok{2}\NormalTok{]),}
+             \AttributeTok{W =} \FunctionTok{round}\NormalTok{(wt}\SpecialCharTok{$}\NormalTok{statistic, }\DecValTok{2}\NormalTok{), }\AttributeTok{p\_raw =} \FunctionTok{round}\NormalTok{(wt}\SpecialCharTok{$}\NormalTok{p.value, }\DecValTok{4}\NormalTok{))}
+\NormalTok{    \}) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{mutate}\NormalTok{(}\AttributeTok{p\_bonferroni =} \FunctionTok{round}\NormalTok{(}\FunctionTok{p.adjust}\NormalTok{(p\_raw, }\StringTok{"bonferroni"}\NormalTok{), }\DecValTok{4}\NormalTok{),}
+             \AttributeTok{Significant  =} \FunctionTok{ifelse}\NormalTok{(p\_bonferroni }\SpecialCharTok{\textless{}} \FloatTok{0.05}\NormalTok{, }\StringTok{"Yes"}\NormalTok{, }\StringTok{"No"}\NormalTok{))}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{kable}\NormalTok{(results\_fw,}
+                \AttributeTok{caption =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Bonferroni Post{-}Hoc (Wilcoxon) {-}"}\NormalTok{, label),}
+                \AttributeTok{align =} \StringTok{"lrrrc"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+            \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{,}\StringTok{"condensed"}\NormalTok{),}
+                          \AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{))}
+\NormalTok{  \}}
+  \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(df\_c))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 7 / 7.1  Compute difference scores and run normality{-}adaptive one{-}sample test}
+\CommentTok{\#}
+\CommentTok{\# Contrasts: Pre {-} Non and Post {-} Non (for lure\_CR and target\_hit)}
+\CommentTok{\# values\_fn = mean prevents list{-}column bug if duplicates exist}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{compute\_diff\_scores }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(bp\_df) \{}
+\NormalTok{  bp\_df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(participant\_id, boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{lure\_CR    =} \FunctionTok{mean}\NormalTok{(lure\_CR,    }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{target\_hit =} \FunctionTok{mean}\NormalTok{(target\_hit, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{.groups    =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from  =}\NormalTok{ boundary\_position,}
+                \AttributeTok{values\_from =} \FunctionTok{c}\NormalTok{(lure\_CR, target\_hit)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}
+      \AttributeTok{lure\_pre\_diff    =}\NormalTok{ lure\_CR\_Pre    }\SpecialCharTok{{-}}\NormalTok{ lure\_CR\_Non,}
+      \AttributeTok{lure\_post\_diff   =}\NormalTok{ lure\_CR\_Post   }\SpecialCharTok{{-}}\NormalTok{ lure\_CR\_Non,}
+      \AttributeTok{target\_pre\_diff  =}\NormalTok{ target\_hit\_Pre  }\SpecialCharTok{{-}}\NormalTok{ target\_hit\_Non,}
+      \AttributeTok{target\_post\_diff =}\NormalTok{ target\_hit\_Post }\SpecialCharTok{{-}}\NormalTok{ target\_hit\_Non}
+\NormalTok{    )}
+\NormalTok{\}}
+
+\NormalTok{one\_sample\_test\_adaptive }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-}"}\NormalTok{, label, }\StringTok{"{-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{  x }\OtherTok{\textless{}{-}}\NormalTok{ x[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(x)]}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(x) }\SpecialCharTok{\textless{}} \DecValTok{3}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few observations (n ="}\NormalTok{, }\FunctionTok{length}\NormalTok{(x), }\StringTok{").}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+\NormalTok{  sw }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(x)}
+  \FunctionTok{cat}\NormalTok{(}\FunctionTok{sprintf}\NormalTok{(}\StringTok{"  Shapiro{-}Wilk: W = \%.4f, p = \%.4f {-}\textgreater{} \%s}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{,}
+\NormalTok{              sw}\SpecialCharTok{$}\NormalTok{statistic, sw}\SpecialCharTok{$}\NormalTok{p.value,}
+              \FunctionTok{ifelse}\NormalTok{(sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}\NormalTok{,}
+                     \StringTok{"Normal {-}\textgreater{} one{-}sample t{-}test"}\NormalTok{,}
+                     \StringTok{"NON{-}NORMAL {-}\textgreater{} Wilcoxon signed{-}rank"}\NormalTok{)))}
+  \ControlFlowTok{if}\NormalTok{ (sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}\NormalTok{) }\FunctionTok{print}\NormalTok{(}\FunctionTok{t.test}\NormalTok{(x, }\AttributeTok{mu =} \DecValTok{0}\NormalTok{))}
+  \ControlFlowTok{else} \FunctionTok{print}\NormalTok{(}\FunctionTok{wilcox.test}\NormalTok{(x, }\AttributeTok{mu =} \DecValTok{0}\NormalTok{, }\AttributeTok{exact =} \ConstantTok{FALSE}\NormalTok{))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 8  Normality{-}aware paired test: Pre vs Post (within{-}participant)}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{paired\_test\_adaptive }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, dv, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-}"}\NormalTok{, label, }\StringTok{": Paired Pre vs Post (SAP 8) {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{  wide }\OtherTok{\textless{}{-}}\NormalTok{ df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(participant\_id, boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{val =} \FunctionTok{mean}\NormalTok{(.data[[dv]], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(boundary\_position }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"Pre"}\NormalTok{, }\StringTok{"Post"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ boundary\_position, }\AttributeTok{values\_from =}\NormalTok{ val) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(.data[[}\StringTok{"Pre"}\NormalTok{]]), }\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(.data[[}\StringTok{"Post"}\NormalTok{]]))}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"  Complete pairs:"}\NormalTok{, }\FunctionTok{nrow}\NormalTok{(wide), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(wide) }\SpecialCharTok{\textless{}} \DecValTok{3}\NormalTok{) \{ }\FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few complete pairs.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{); }\FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{)) \}}
+\NormalTok{  diffs }\OtherTok{\textless{}{-}}\NormalTok{ wide}\SpecialCharTok{$}\NormalTok{Pre }\SpecialCharTok{{-}}\NormalTok{ wide}\SpecialCharTok{$}\NormalTok{Post}
+\NormalTok{  sw    }\OtherTok{\textless{}{-}} \FunctionTok{shapiro.test}\NormalTok{(diffs)}
+  \FunctionTok{cat}\NormalTok{(}\FunctionTok{sprintf}\NormalTok{(}\StringTok{"  Shapiro{-}Wilk on differences: W = \%.4f, p = \%.4f {-}\textgreater{} \%s}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{,}
+\NormalTok{              sw}\SpecialCharTok{$}\NormalTok{statistic, sw}\SpecialCharTok{$}\NormalTok{p.value,}
+              \FunctionTok{ifelse}\NormalTok{(sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}\NormalTok{, }\StringTok{"Normal {-}\textgreater{} paired t{-}test"}\NormalTok{,}
+                     \StringTok{"NON{-}NORMAL {-}\textgreater{} Wilcoxon signed{-}rank"}\NormalTok{)))}
+  \ControlFlowTok{if}\NormalTok{ (sw}\SpecialCharTok{$}\NormalTok{p.value }\SpecialCharTok{\textgreater{}=} \FloatTok{0.05}\NormalTok{) }\FunctionTok{print}\NormalTok{(}\FunctionTok{t.test}\NormalTok{(wide}\SpecialCharTok{$}\NormalTok{Pre, wide}\SpecialCharTok{$}\NormalTok{Post, }\AttributeTok{paired =} \ConstantTok{TRUE}\NormalTok{))}
+  \ControlFlowTok{else} \FunctionTok{print}\NormalTok{(}\FunctionTok{wilcox.test}\NormalTok{(wide}\SpecialCharTok{$}\NormalTok{Pre, wide}\SpecialCharTok{$}\NormalTok{Post, }\AttributeTok{paired =} \ConstantTok{TRUE}\NormalTok{, }\AttributeTok{exact =} \ConstantTok{FALSE}\NormalTok{))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 9  Linear mixed{-}effects model on trial{-}level data}
+\CommentTok{\#}
+\CommentTok{\# DV is binary (0/1) per trial; lmer gives a linear probability model.}
+\CommentTok{\# For a fully correct binary analysis use glmer(family = binomial) {-} see}
+\CommentTok{\# commented block inside the function.}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{run\_lme\_trial }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df\_labeled, }\AttributeTok{exp\_label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{==="}\NormalTok{, exp\_label, }\StringTok{": LME Models (SAP 9) ===}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"Formula: correct \textasciitilde{} boundary\_position + (1 | participant\_id)}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+\NormalTok{  df\_lme }\OtherTok{\textless{}{-}}\NormalTok{ df\_labeled }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}
+      \AttributeTok{lure\_correct      =} \FunctionTok{as.integer}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}   \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Similar"}\NormalTok{),}
+      \AttributeTok{target\_hit        =} \FunctionTok{as.integer}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Target"} \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Old"}\NormalTok{),}
+      \AttributeTok{boundary\_position =} \FunctionTok{factor}\NormalTok{(boundary\_position, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{, }\StringTok{"Pre"}\NormalTok{, }\StringTok{"Post"}\NormalTok{))}
+\NormalTok{    )}
+
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"{-}{-}{-} Lure Correct Rejection {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{  df\_l }\OtherTok{\textless{}{-}}\NormalTok{ df\_lme }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(}\FunctionTok{as.character}\NormalTok{(stimulus\_type) }\SpecialCharTok{==} \StringTok{"Lure"}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{n\_distinct}\NormalTok{(df\_l}\SpecialCharTok{$}\NormalTok{participant\_id) }\SpecialCharTok{\textgreater{}=} \DecValTok{3}\NormalTok{) \{}
+\NormalTok{    m\_l }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(lure\_correct }\SpecialCharTok{\textasciitilde{}}\NormalTok{ boundary\_position }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{|}\NormalTok{ participant\_id),}
+                \AttributeTok{data =}\NormalTok{ df\_l, }\AttributeTok{REML =} \ConstantTok{TRUE}\NormalTok{)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{summary}\NormalTok{(m\_l))}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{Anova (Type III):}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{); }\FunctionTok{print}\NormalTok{(}\FunctionTok{anova}\NormalTok{(m\_l))}
+\NormalTok{  \} }\ControlFlowTok{else} \FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few participants.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Target Hit Rate {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{  df\_t }\OtherTok{\textless{}{-}}\NormalTok{ df\_lme }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(}\FunctionTok{as.character}\NormalTok{(stimulus\_type) }\SpecialCharTok{==} \StringTok{"Target"}\NormalTok{)}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{n\_distinct}\NormalTok{(df\_t}\SpecialCharTok{$}\NormalTok{participant\_id) }\SpecialCharTok{\textgreater{}=} \DecValTok{3}\NormalTok{) \{}
+\NormalTok{    m\_t }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(target\_hit }\SpecialCharTok{\textasciitilde{}}\NormalTok{ boundary\_position }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{|}\NormalTok{ participant\_id),}
+                \AttributeTok{data =}\NormalTok{ df\_t, }\AttributeTok{REML =} \ConstantTok{TRUE}\NormalTok{)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{summary}\NormalTok{(m\_t))}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{Anova (Type III):}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{); }\FunctionTok{print}\NormalTok{(}\FunctionTok{anova}\NormalTok{(m\_t))}
+\NormalTok{  \} }\ControlFlowTok{else} \FunctionTok{cat}\NormalTok{(}\StringTok{"  Too few participants.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+  \CommentTok{\# ============================================================}
+  \CommentTok{\# COMMENTED OUT: logistic mixed model (correct for binary DV)}
+  \CommentTok{\# Uncomment if preferred over linear probability model above.}
+  \CommentTok{\#}
+  \CommentTok{\# m\_l\_glmer \textless{}{-} glmer(}
+  \CommentTok{\#   lure\_correct \textasciitilde{} boundary\_position + (1 | participant\_id),}
+  \CommentTok{\#   data   = df\_lme \%\textgreater{}\% filter(stimulus\_type == "Lure"),}
+  \CommentTok{\#   family = binomial}
+  \CommentTok{\# )}
+  \CommentTok{\# print(summary(m\_l\_glmer))}
+  \CommentTok{\# m\_t\_glmer \textless{}{-} glmer(}
+  \CommentTok{\#   target\_hit \textasciitilde{} boundary\_position + (1 | participant\_id),}
+  \CommentTok{\#   data   = df\_lme \%\textgreater{}\% filter(stimulus\_type == "Target"),}
+  \CommentTok{\#   family = binomial}
+  \CommentTok{\# )}
+  \CommentTok{\# print(summary(m\_t\_glmer))}
+  \CommentTok{\# ============================================================}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# SAP 10  Lure similarity bin analysis}
+\CommentTok{\# =============================================================================}
+
+\NormalTok{lure\_bin\_analysis }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(test\_df, task\_df, }\AttributeTok{exp\_label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{==="}\NormalTok{, exp\_label, }\StringTok{": Lure Similarity Bin Analysis (SAP 10) ===}\SpecialCharTok{\textbackslash{}n\textbackslash{}n}\StringTok{"}\NormalTok{)}
+
+\NormalTok{  lure\_data }\OtherTok{\textless{}{-}}\NormalTok{ test\_df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{left\_join}\NormalTok{(task\_df }\SpecialCharTok{\%\textgreater{}\%}
+                \FunctionTok{select}\NormalTok{(participant\_id, image\_name, boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+                \FunctionTok{distinct}\NormalTok{(),}
+              \AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{"participant\_id"}\NormalTok{, }\StringTok{"image\_name"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(boundary\_position)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}
+      \AttributeTok{sim\_bin =} \FunctionTok{case\_when}\NormalTok{(}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"\_1[\_}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.]|bin1|lure1|sim1|low"}\NormalTok{)  }\SpecialCharTok{\textasciitilde{}} \StringTok{"Low"}\NormalTok{,}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"\_2[\_}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.]|bin2|lure2|sim2|med"}\NormalTok{)  }\SpecialCharTok{\textasciitilde{}} \StringTok{"Medium"}\NormalTok{,}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"\_3[\_}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.]|bin3|lure3|sim3|high"}\NormalTok{) }\SpecialCharTok{\textasciitilde{}} \StringTok{"High"}\NormalTok{,}
+        \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \ConstantTok{NA\_character\_}
+\NormalTok{      ),}
+      \AttributeTok{lure\_correct =}\NormalTok{ (response\_type }\SpecialCharTok{==} \StringTok{"Similar"}\NormalTok{)}
+\NormalTok{    ) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(sim\_bin))}
+
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(lure\_data) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"No similarity bin information found in image names.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"Sample lure image names:}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{print}\NormalTok{(}\FunctionTok{head}\NormalTok{(test\_df}\SpecialCharTok{$}\NormalTok{image\_name[test\_df}\SpecialCharTok{$}\NormalTok{stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}\NormalTok{], }\DecValTok{10}\NormalTok{))}
+    \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"Lure trials with bin info:"}\NormalTok{, }\FunctionTok{nrow}\NormalTok{(lure\_data), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \FunctionTok{print}\NormalTok{(}\FunctionTok{table}\NormalTok{(lure\_data}\SpecialCharTok{$}\NormalTok{sim\_bin, lure\_data}\SpecialCharTok{$}\NormalTok{boundary\_position))}
+
+\NormalTok{  lure\_agg }\OtherTok{\textless{}{-}}\NormalTok{ lure\_data }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(participant\_id, boundary\_position, sim\_bin) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{lure\_CR =} \FunctionTok{mean}\NormalTok{(lure\_correct, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{sim\_bin =} \FunctionTok{factor}\NormalTok{(sim\_bin, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Low"}\NormalTok{, }\StringTok{"Medium"}\NormalTok{, }\StringTok{"High"}\NormalTok{)))}
+
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} KW: Boundary Position within each Similarity Bin {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \ControlFlowTok{for}\NormalTok{ (b }\ControlFlowTok{in} \FunctionTok{levels}\NormalTok{(lure\_agg}\SpecialCharTok{$}\NormalTok{sim\_bin)) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{Bin:"}\NormalTok{, b, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    sub }\OtherTok{\textless{}{-}}\NormalTok{ lure\_agg }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(sim\_bin }\SpecialCharTok{==}\NormalTok{ b)}
+    \FunctionTok{safe\_kruskal}\NormalTok{(sub}\SpecialCharTok{$}\NormalTok{lure\_CR, sub}\SpecialCharTok{$}\NormalTok{boundary\_position, }\FunctionTok{paste}\NormalTok{(}\StringTok{"Bin:"}\NormalTok{, b))}
+\NormalTok{  \}}
+
+  \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{{-}{-}{-} KW: Similarity Bin within each Boundary Position {-}{-}{-}}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+  \ControlFlowTok{for}\NormalTok{ (bp\_lv }\ControlFlowTok{in} \FunctionTok{levels}\NormalTok{(}\FunctionTok{droplevels}\NormalTok{(}\FunctionTok{as.factor}\NormalTok{(lure\_agg}\SpecialCharTok{$}\NormalTok{boundary\_position)))) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{Boundary:"}\NormalTok{, bp\_lv, }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\NormalTok{    sub }\OtherTok{\textless{}{-}}\NormalTok{ lure\_agg }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(}\FunctionTok{as.character}\NormalTok{(boundary\_position) }\SpecialCharTok{==}\NormalTok{ bp\_lv)}
+    \FunctionTok{safe\_kruskal}\NormalTok{(sub}\SpecialCharTok{$}\NormalTok{lure\_CR, sub}\SpecialCharTok{$}\NormalTok{sim\_bin, }\FunctionTok{paste}\NormalTok{(}\StringTok{"Boundary:"}\NormalTok{, bp\_lv))}
+\NormalTok{  \}}
+
+\NormalTok{  sum\_df }\OtherTok{\textless{}{-}}\NormalTok{ lure\_agg }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(boundary\_position, sim\_bin) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{median\_CR =} \FunctionTok{median}\NormalTok{(lure\_CR, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q25 =} \FunctionTok{quantile}\NormalTok{(lure\_CR, }\FloatTok{0.25}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q75 =} \FunctionTok{quantile}\NormalTok{(lure\_CR, }\FloatTok{0.75}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{)}
+
+  \FunctionTok{print}\NormalTok{(}
+    \FunctionTok{ggplot}\NormalTok{(sum\_df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ boundary\_position, }\AttributeTok{y =}\NormalTok{ median\_CR,}
+                       \AttributeTok{color =}\NormalTok{ sim\_bin, }\AttributeTok{group =}\NormalTok{ sim\_bin)) }\SpecialCharTok{+}
+      \FunctionTok{geom\_ribbon}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{ymin =}\NormalTok{ q25, }\AttributeTok{ymax =}\NormalTok{ q75, }\AttributeTok{fill =}\NormalTok{ sim\_bin),}
+                  \AttributeTok{alpha =} \FloatTok{0.12}\NormalTok{, }\AttributeTok{color =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+      \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{linewidth =} \FloatTok{1.2}\NormalTok{) }\SpecialCharTok{+}
+      \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{size =} \DecValTok{4}\NormalTok{, }\AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{fill =}\NormalTok{ sim\_bin),}
+                 \AttributeTok{color =} \StringTok{"white"}\NormalTok{, }\AttributeTok{stroke =} \FloatTok{1.6}\NormalTok{) }\SpecialCharTok{+}
+      \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\AttributeTok{Low =} \StringTok{"\#4D9DE0"}\NormalTok{, }\AttributeTok{Medium =} \StringTok{"\#E8A838"}\NormalTok{, }\AttributeTok{High =} \StringTok{"\#E15554"}\NormalTok{)) }\SpecialCharTok{+}
+      \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values  =} \FunctionTok{c}\NormalTok{(}\AttributeTok{Low =} \StringTok{"\#4D9DE0"}\NormalTok{, }\AttributeTok{Medium =} \StringTok{"\#E8A838"}\NormalTok{, }\AttributeTok{High =} \StringTok{"\#E15554"}\NormalTok{)) }\SpecialCharTok{+}
+      \FunctionTok{labs}\NormalTok{(}\AttributeTok{title    =} \FunctionTok{paste}\NormalTok{(exp\_label, }\StringTok{": Lure CR by Boundary x Similarity Bin"}\NormalTok{),}
+           \AttributeTok{subtitle =} \StringTok{"Shaded band = IQR | Points = median"}\NormalTok{,}
+           \AttributeTok{x =} \StringTok{"Boundary Position"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Lure Correct Rejection Rate"}\NormalTok{,}
+           \AttributeTok{color =} \StringTok{"Similarity Bin"}\NormalTok{, }\AttributeTok{fill =} \StringTok{"Similarity Bin"}\NormalTok{) }\SpecialCharTok{+}
+      \FunctionTok{theme\_study}\NormalTok{(}\AttributeTok{legend =} \StringTok{"right"}\NormalTok{)}
+\NormalTok{  )}
+  \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(lure\_agg))}
+\NormalTok{\}}
+
+\CommentTok{\# =============================================================================}
+\CommentTok{\# PLOTS}
+\CommentTok{\# =============================================================================}
+
+\CommentTok{\# {-}{-}{-} Spaghetti + summary plot (best for within{-}participant repeated measures) {-}{-}{-}}
+\CommentTok{\# Shows individual participant trajectories (thin grey lines) plus group median}
+\CommentTok{\# with IQR as a bold overlay. Clearly communicates both individual variability}
+\CommentTok{\# and the group{-}level trend without hiding the data.}
+
+\NormalTok{spaghetti\_plot }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, x\_var, y\_var,}
+                            \AttributeTok{title =} \StringTok{""}\NormalTok{, }\AttributeTok{subtitle =} \StringTok{""}\NormalTok{,}
+                            \AttributeTok{x\_lab =}\NormalTok{ x\_var, }\AttributeTok{y\_lab =}\NormalTok{ y\_var,}
+                            \AttributeTok{facet\_var =} \ConstantTok{NULL}\NormalTok{) \{}
+\NormalTok{  sum\_df }\OtherTok{\textless{}{-}}\NormalTok{ df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(}\FunctionTok{c}\NormalTok{(x\_var, facet\_var)))) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{median\_val =} \FunctionTok{median}\NormalTok{(.data[[y\_var]], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q25        =} \FunctionTok{quantile}\NormalTok{(.data[[y\_var]], }\FloatTok{0.25}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q75        =} \FunctionTok{quantile}\NormalTok{(.data[[y\_var]], }\FloatTok{0.75}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{.groups    =} \StringTok{"drop"}\NormalTok{)}
+
+\NormalTok{  p }\OtherTok{\textless{}{-}} \FunctionTok{ggplot}\NormalTok{(df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ .data[[x\_var]], }\AttributeTok{y =}\NormalTok{ .data[[y\_var]],}
+                       \AttributeTok{group =}\NormalTok{ participant\_id)) }\SpecialCharTok{+}
+    \CommentTok{\# Individual participant lines}
+    \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"grey70"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.6}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{color =} \StringTok{"grey60"}\NormalTok{, }\AttributeTok{size =} \FloatTok{1.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.5}\NormalTok{) }\SpecialCharTok{+}
+    \CommentTok{\# Group median + IQR ribbon}
+    \FunctionTok{geom\_ribbon}\NormalTok{(}\AttributeTok{data =}\NormalTok{ sum\_df,}
+                \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ median\_val, }\AttributeTok{ymin =}\NormalTok{ q25, }\AttributeTok{ymax =}\NormalTok{ q75, }\AttributeTok{group =} \DecValTok{1}\NormalTok{),}
+                \AttributeTok{fill =} \StringTok{"\#4D9DE0"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.18}\NormalTok{, }\AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ sum\_df,}
+              \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ median\_val, }\AttributeTok{group =} \DecValTok{1}\NormalTok{),}
+              \AttributeTok{color =} \StringTok{"\#2176AE"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{1.5}\NormalTok{, }\AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_point}\NormalTok{(}\AttributeTok{data =}\NormalTok{ sum\_df,}
+               \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ median\_val, }\AttributeTok{fill =}\NormalTok{ .data[[x\_var]], }\AttributeTok{group =} \DecValTok{1}\NormalTok{),}
+               \AttributeTok{shape =} \DecValTok{21}\NormalTok{, }\AttributeTok{size =} \DecValTok{4}\NormalTok{, }\AttributeTok{color =} \StringTok{"white"}\NormalTok{, }\AttributeTok{stroke =} \FloatTok{1.8}\NormalTok{,}
+               \AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values =}\NormalTok{ bp\_colors) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =}\NormalTok{ title, }\AttributeTok{subtitle =}\NormalTok{ subtitle, }\AttributeTok{x =}\NormalTok{ x\_lab, }\AttributeTok{y =}\NormalTok{ y\_lab) }\SpecialCharTok{+}
+    \FunctionTok{theme\_study}\NormalTok{()}
+
+  \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\FunctionTok{is.null}\NormalTok{(facet\_var))}
+\NormalTok{    p }\OtherTok{\textless{}{-}}\NormalTok{ p }\SpecialCharTok{+} \FunctionTok{facet\_wrap}\NormalTok{(}\FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"\textasciitilde{}"}\NormalTok{, facet\_var)))}
+  \FunctionTok{return}\NormalTok{(p)}
+\NormalTok{\}}
+
+\CommentTok{\# {-}{-}{-} Spaghetti for two groups (RT: Target vs Lure) {-}{-}{-}}
+\NormalTok{spaghetti\_grouped }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(df, x\_var, y\_var, group\_var,}
+                               \AttributeTok{title =} \StringTok{""}\NormalTok{, }\AttributeTok{subtitle =} \StringTok{""}\NormalTok{,}
+                               \AttributeTok{x\_lab =}\NormalTok{ x\_var, }\AttributeTok{y\_lab =}\NormalTok{ y\_var,}
+                               \AttributeTok{colors =} \FunctionTok{c}\NormalTok{(}\StringTok{"\#4D9DE0"}\NormalTok{, }\StringTok{"\#E15554"}\NormalTok{)) \{}
+\NormalTok{  grp\_lvls }\OtherTok{\textless{}{-}} \FunctionTok{unique}\NormalTok{(df[[group\_var]])}
+\NormalTok{  sum\_df }\OtherTok{\textless{}{-}}\NormalTok{ df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{group\_by}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(}\FunctionTok{c}\NormalTok{(x\_var, group\_var)))) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{median\_val =} \FunctionTok{median}\NormalTok{(.data[[y\_var]], }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q25        =} \FunctionTok{quantile}\NormalTok{(.data[[y\_var]], }\FloatTok{0.25}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{q75        =} \FunctionTok{quantile}\NormalTok{(.data[[y\_var]], }\FloatTok{0.75}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+              \AttributeTok{.groups    =} \StringTok{"drop"}\NormalTok{)}
+
+  \FunctionTok{ggplot}\NormalTok{(df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ .data[[x\_var]], }\AttributeTok{y =}\NormalTok{ .data[[y\_var]],}
+                  \AttributeTok{group =} \FunctionTok{interaction}\NormalTok{(participant\_id, .data[[group\_var]]),}
+                  \AttributeTok{color =}\NormalTok{ .data[[group\_var]])) }\SpecialCharTok{+}
+    \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ .data[[group\_var]]), }\AttributeTok{linewidth =} \FloatTok{0.4}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.35}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_line}\NormalTok{(}\AttributeTok{data =}\NormalTok{ sum\_df,}
+              \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ median\_val, }\AttributeTok{group =}\NormalTok{ .data[[group\_var]],}
+                  \AttributeTok{color =}\NormalTok{ .data[[group\_var]]),}
+              \AttributeTok{linewidth =} \FloatTok{1.6}\NormalTok{, }\AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_pointrange}\NormalTok{(}\AttributeTok{data =}\NormalTok{ sum\_df,}
+                    \FunctionTok{aes}\NormalTok{(}\AttributeTok{y =}\NormalTok{ median\_val, }\AttributeTok{ymin =}\NormalTok{ q25, }\AttributeTok{ymax =}\NormalTok{ q75,}
+                        \AttributeTok{color =}\NormalTok{ .data[[group\_var]], }\AttributeTok{group =}\NormalTok{ .data[[group\_var]]),}
+                    \AttributeTok{size =} \FloatTok{0.7}\NormalTok{, }\AttributeTok{fatten =} \DecValTok{4}\NormalTok{, }\AttributeTok{inherit.aes =} \ConstantTok{FALSE}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{setNames}\NormalTok{(colors, grp\_lvls)) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =}\NormalTok{ title, }\AttributeTok{subtitle =}\NormalTok{ subtitle,}
+         \AttributeTok{x =}\NormalTok{ x\_lab, }\AttributeTok{y =}\NormalTok{ y\_lab, }\AttributeTok{color =}\NormalTok{ group\_var) }\SpecialCharTok{+}
+    \FunctionTok{theme\_study}\NormalTok{(}\AttributeTok{legend =} \StringTok{"right"}\NormalTok{)}
+\NormalTok{\}}
+
+\CommentTok{\# {-}{-}{-} Difference score plot (violin + box + jitter + mean diamond) {-}{-}{-}}
+\NormalTok{diff\_score\_plot }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(diff\_df, }\AttributeTok{title =} \StringTok{""}\NormalTok{) \{}
+\NormalTok{  req }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}\StringTok{"participant\_id"}\NormalTok{, }\StringTok{"lure\_pre\_diff"}\NormalTok{, }\StringTok{"lure\_post\_diff"}\NormalTok{,}
+           \StringTok{"target\_pre\_diff"}\NormalTok{, }\StringTok{"target\_post\_diff"}\NormalTok{)}
+\NormalTok{  missing }\OtherTok{\textless{}{-}} \FunctionTok{setdiff}\NormalTok{(req, }\FunctionTok{names}\NormalTok{(diff\_df))}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{length}\NormalTok{(missing) }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"diff\_score\_plot: missing columns:"}\NormalTok{, }\FunctionTok{paste}\NormalTok{(missing, }\AttributeTok{collapse =} \StringTok{", "}\NormalTok{), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+    \FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+\NormalTok{  plot\_df }\OtherTok{\textless{}{-}}\NormalTok{ diff\_df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{select}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(req)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{pivot\_longer}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{participant\_id, }\AttributeTok{names\_to =} \StringTok{"contrast"}\NormalTok{, }\AttributeTok{values\_to =} \StringTok{"diff"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(diff)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}
+      \AttributeTok{Measure   =} \FunctionTok{ifelse}\NormalTok{(}\FunctionTok{str\_detect}\NormalTok{(contrast, }\StringTok{"lure"}\NormalTok{), }\StringTok{"Lure CR"}\NormalTok{, }\StringTok{"Target Hit"}\NormalTok{),}
+      \AttributeTok{Condition =} \FunctionTok{factor}\NormalTok{(}\FunctionTok{ifelse}\NormalTok{(}\FunctionTok{str\_detect}\NormalTok{(contrast, }\StringTok{"pre"}\NormalTok{), }\StringTok{"Pre {-} Non"}\NormalTok{, }\StringTok{"Post {-} Non"}\NormalTok{),}
+                         \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Pre {-} Non"}\NormalTok{, }\StringTok{"Post {-} Non"}\NormalTok{))}
+\NormalTok{    )}
+  \ControlFlowTok{if}\NormalTok{ (}\FunctionTok{nrow}\NormalTok{(plot\_df) }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) \{}
+    \FunctionTok{cat}\NormalTok{(}\StringTok{"diff\_score\_plot: no data after filtering NAs.}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{); }\FunctionTok{return}\NormalTok{(}\FunctionTok{invisible}\NormalTok{(}\ConstantTok{NULL}\NormalTok{))}
+\NormalTok{  \}}
+  \FunctionTok{ggplot}\NormalTok{(plot\_df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Condition, }\AttributeTok{y =}\NormalTok{ diff, }\AttributeTok{fill =}\NormalTok{ Condition)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"grey40"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_violin}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.40}\NormalTok{, }\AttributeTok{trim =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{color =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.15}\NormalTok{, }\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{color =} \StringTok{"grey30"}\NormalTok{,}
+                 \AttributeTok{outlier.shape =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_jitter}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ Condition), }\AttributeTok{width =} \FloatTok{0.07}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.2}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{stat\_summary}\NormalTok{(}\AttributeTok{fun =}\NormalTok{ mean, }\AttributeTok{geom =} \StringTok{"point"}\NormalTok{, }\AttributeTok{shape =} \DecValTok{23}\NormalTok{, }\AttributeTok{size =} \FloatTok{4.5}\NormalTok{,}
+                 \AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{color =}\NormalTok{ Condition), }\AttributeTok{stroke =} \FloatTok{1.8}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values  =} \FunctionTok{c}\NormalTok{(}\StringTok{"Pre {-} Non"} \OtherTok{=} \StringTok{"\#F5AEAE"}\NormalTok{, }\StringTok{"Post {-} Non"} \OtherTok{=} \StringTok{"\#AEECD0"}\NormalTok{)) }\SpecialCharTok{+}
+    \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\StringTok{"Pre {-} Non"} \OtherTok{=} \StringTok{"\#E15554"}\NormalTok{, }\StringTok{"Post {-} Non"} \OtherTok{=} \StringTok{"\#3BB273"}\NormalTok{)) }\SpecialCharTok{+}
+    \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{ Measure, }\AttributeTok{scales =} \StringTok{"free\_y"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title    =}\NormalTok{ title,}
+         \AttributeTok{subtitle =} \StringTok{"Dashed line = 0 | Diamond = mean | Points = participants"}\NormalTok{,}
+         \AttributeTok{x =} \StringTok{"Contrast"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Difference in Proportion Correct"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_study}\NormalTok{()}
+\NormalTok{\}}
+
+\CommentTok{\# {-}{-}{-} REC / LDI plot {-}{-}{-}}
+\NormalTok{rec\_ldi\_plot }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(metrics\_df, rec\_col, ldi\_col, }\AttributeTok{title =} \StringTok{""}\NormalTok{) \{}
+\NormalTok{  metrics\_df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{pivot\_longer}\NormalTok{(}\AttributeTok{cols =} \FunctionTok{c}\NormalTok{(}\FunctionTok{all\_of}\NormalTok{(rec\_col), }\FunctionTok{all\_of}\NormalTok{(ldi\_col)),}
+                 \AttributeTok{names\_to =} \StringTok{"Metric"}\NormalTok{, }\AttributeTok{values\_to =} \StringTok{"Value"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{Metric =} \FunctionTok{recode}\NormalTok{(Metric, }\SpecialCharTok{!!}\AttributeTok{rec\_col :=} \StringTok{"REC"}\NormalTok{, }\SpecialCharTok{!!}\AttributeTok{ldi\_col :=} \StringTok{"LDI"}\NormalTok{),}
+           \AttributeTok{Metric =} \FunctionTok{factor}\NormalTok{(Metric, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"REC"}\NormalTok{, }\StringTok{"LDI"}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x =}\NormalTok{ Metric, }\AttributeTok{y =}\NormalTok{ Value, }\AttributeTok{fill =}\NormalTok{ Metric, }\AttributeTok{color =}\NormalTok{ Metric)) }\SpecialCharTok{+}
+    \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept =} \DecValTok{0}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{, }\AttributeTok{color =} \StringTok{"grey40"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.8}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_violin}\NormalTok{(}\AttributeTok{alpha =} \FloatTok{0.30}\NormalTok{, }\AttributeTok{trim =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{color =} \ConstantTok{NA}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_boxplot}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.14}\NormalTok{, }\AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{outlier.shape =} \ConstantTok{NA}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{geom\_jitter}\NormalTok{(}\AttributeTok{width =} \FloatTok{0.07}\NormalTok{, }\AttributeTok{size =} \FloatTok{2.5}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.7}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{stat\_summary}\NormalTok{(}\AttributeTok{fun =}\NormalTok{ mean, }\AttributeTok{geom =} \StringTok{"point"}\NormalTok{, }\AttributeTok{shape =} \DecValTok{23}\NormalTok{, }\AttributeTok{size =} \FloatTok{4.5}\NormalTok{,}
+                 \AttributeTok{fill =} \StringTok{"white"}\NormalTok{, }\AttributeTok{stroke =} \FloatTok{1.8}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{scale\_fill\_manual}\NormalTok{(}\AttributeTok{values  =} \FunctionTok{c}\NormalTok{(}\AttributeTok{REC =} \StringTok{"\#AED4F5"}\NormalTok{, }\AttributeTok{LDI =} \StringTok{"\#F5AEAE"}\NormalTok{)) }\SpecialCharTok{+}
+    \FunctionTok{scale\_color\_manual}\NormalTok{(}\AttributeTok{values =} \FunctionTok{c}\NormalTok{(}\AttributeTok{REC =} \StringTok{"\#4D9DE0"}\NormalTok{, }\AttributeTok{LDI =} \StringTok{"\#E15554"}\NormalTok{)) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title    =}\NormalTok{ title,}
+         \AttributeTok{subtitle =} \StringTok{"Dashed line = 0 | Diamond = mean | Points = participants"}\NormalTok{,}
+         \AttributeTok{x =} \StringTok{"Metric"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Score"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_study}\NormalTok{()}
+\NormalTok{\}}
+
+\CommentTok{\# {-}{-}{-} Q{-}Q plot {-}{-}{-}}
+\NormalTok{qq\_plot }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(x, }\AttributeTok{label =} \StringTok{""}\NormalTok{) \{}
+  \FunctionTok{tibble}\NormalTok{(}\AttributeTok{vals =}\NormalTok{ x) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{ggplot}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{sample =}\NormalTok{ vals)) }\SpecialCharTok{+}
+    \FunctionTok{stat\_qq}\NormalTok{(}\AttributeTok{color =} \StringTok{"\#4D9DE0"}\NormalTok{, }\AttributeTok{alpha =} \FloatTok{0.75}\NormalTok{, }\AttributeTok{size =} \DecValTok{2}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{stat\_qq\_line}\NormalTok{(}\AttributeTok{color =} \StringTok{"\#E15554"}\NormalTok{, }\AttributeTok{linewidth =} \FloatTok{0.9}\NormalTok{, }\AttributeTok{linetype =} \StringTok{"dashed"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{labs}\NormalTok{(}\AttributeTok{title =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Q{-}Q:"}\NormalTok{, label), }\AttributeTok{subtitle =} \StringTok{"Close to line = normal"}\NormalTok{,}
+         \AttributeTok{x =} \StringTok{"Theoretical Quantiles"}\NormalTok{, }\AttributeTok{y =} \StringTok{"Sample Quantiles"}\NormalTok{) }\SpecialCharTok{+}
+    \FunctionTok{theme\_study}\NormalTok{()}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Experiment 1: Both Item and
+Task}\label{experiment-1-both-item-and-task}
+
+\subsection{1.1 Load Task Data}\label{load-task-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# CSV columns (Both \& Item experiments):}
+\CommentTok{\#   trials.thisN          {-}\textgreater{} trial row filter (NA = non{-}trial rows, excluded)}
+\CommentTok{\#   image\_path            {-}\textgreater{} stimulus path; basename used as image\_name}
+\CommentTok{\#   participant           {-}\textgreater{} participant ID}
+\CommentTok{\#   trials.key\_resp\_9.rt  {-}\textgreater{} RT window 1 (0{-}3 s)}
+\CommentTok{\#   trials.key\_resp\_8.rt  {-}\textgreater{} RT window 2 (add 3 s offset for true RT)}
+\CommentTok{\# Task{-}only CSVs use bare key\_resp\_9.rt / key\_resp\_8.rt (auto{-}detected below)}
+
+\NormalTok{task\_files\_1 }\OtherTok{\textless{}{-}} \FunctionTok{list.files}\NormalTok{(}
+  \StringTok{"Both\_item\_task/both\_data"}\NormalTok{, }\AttributeTok{pattern =} \StringTok{"\_MST\_task\_.*}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.csv$"}\NormalTok{, }\AttributeTok{full.names =} \ConstantTok{TRUE}
+\NormalTok{)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Task files found:"}\NormalTok{, }\FunctionTok{length}\NormalTok{(task\_files\_1), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Task files found: 52
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{load\_task }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(file\_path) \{}
+\NormalTok{  df  }\OtherTok{\textless{}{-}} \FunctionTok{suppressMessages}\NormalTok{(}\FunctionTok{read\_csv}\NormalTok{(file\_path, }\AttributeTok{show\_col\_types =} \ConstantTok{FALSE}\NormalTok{))}
+\NormalTok{  pid }\OtherTok{\textless{}{-}} \ControlFlowTok{if}\NormalTok{ (}\StringTok{"participant"} \SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(df)) \{}
+    \FunctionTok{as.character}\NormalTok{(}\FunctionTok{as.integer}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{participant[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(df}\SpecialCharTok{$}\NormalTok{participant)][}\DecValTok{1}\NormalTok{]))}
+\NormalTok{  \} }\ControlFlowTok{else}\NormalTok{ \{}
+    \FunctionTok{as.character}\NormalTok{(}\FunctionTok{as.integer}\NormalTok{(}\FunctionTok{substr}\NormalTok{(}\FunctionTok{basename}\NormalTok{(file\_path), }\DecValTok{1}\NormalTok{, }\DecValTok{5}\NormalTok{)))}
+\NormalTok{  \}}
+\NormalTok{  rt9\_col }\OtherTok{\textless{}{-}} \ControlFlowTok{if}\NormalTok{ (}\StringTok{"trials.key\_resp\_9.rt"} \SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(df)) }\StringTok{"trials.key\_resp\_9.rt"} \ControlFlowTok{else} \StringTok{"key\_resp\_9.rt"}
+\NormalTok{  rt8\_col }\OtherTok{\textless{}{-}} \ControlFlowTok{if}\NormalTok{ (}\StringTok{"trials.key\_resp\_8.rt"} \SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(df)) }\StringTok{"trials.key\_resp\_8.rt"} \ControlFlowTok{else} \StringTok{"key\_resp\_8.rt"}
+  \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\NormalTok{rt9\_col }\SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(df)) df[[rt9\_col]] }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+  \ControlFlowTok{if}\NormalTok{ (}\SpecialCharTok{!}\NormalTok{rt8\_col }\SpecialCharTok{\%in\%} \FunctionTok{names}\NormalTok{(df)) df[[rt8\_col]] }\OtherTok{\textless{}{-}} \ConstantTok{NA\_real\_}
+
+\NormalTok{  df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(trials.thisN)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{transmute}\NormalTok{(}
+      \AttributeTok{participant\_id    =}\NormalTok{ pid,}
+      \AttributeTok{image\_name        =} \FunctionTok{basename}\NormalTok{(image\_path),}
+      \AttributeTok{trial\_number      =}\NormalTok{ trials.thisN }\SpecialCharTok{+} \DecValTok{1}\NormalTok{,}
+      \AttributeTok{rt9               =} \FunctionTok{suppressWarnings}\NormalTok{(}\FunctionTok{as.numeric}\NormalTok{(.data[[rt9\_col]])),}
+      \AttributeTok{rt8               =} \FunctionTok{suppressWarnings}\NormalTok{(}\FunctionTok{as.numeric}\NormalTok{(.data[[rt8\_col]])),}
+      \AttributeTok{rt =} \FunctionTok{case\_when}\NormalTok{(}
+        \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(rt9) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ rt9 }\SpecialCharTok{*} \DecValTok{1000}\NormalTok{,}
+        \SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(rt8) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ (}\DecValTok{3} \SpecialCharTok{+}\NormalTok{ rt8) }\SpecialCharTok{*} \DecValTok{1000}\NormalTok{,}
+        \ConstantTok{TRUE}        \SpecialCharTok{\textasciitilde{}} \ConstantTok{NA\_real\_}
+\NormalTok{      ),}
+      \AttributeTok{event\_position    =}\NormalTok{ ((trial\_number }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{) }\SpecialCharTok{\%\%} \DecValTok{7}\NormalTok{) }\SpecialCharTok{+} \DecValTok{1}\NormalTok{,}
+      \AttributeTok{boundary\_position =} \FunctionTok{factor}\NormalTok{(}
+        \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{          event\_position }\SpecialCharTok{==} \DecValTok{1} \SpecialCharTok{\textasciitilde{}} \StringTok{"Post"}\NormalTok{,}
+\NormalTok{          event\_position }\SpecialCharTok{==} \DecValTok{7} \SpecialCharTok{\textasciitilde{}} \StringTok{"Pre"}\NormalTok{,}
+          \ConstantTok{TRUE}                \SpecialCharTok{\textasciitilde{}} \StringTok{"Non"}
+\NormalTok{        ),}
+        \AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{, }\StringTok{"Pre"}\NormalTok{, }\StringTok{"Post"}\NormalTok{)}
+\NormalTok{      )}
+\NormalTok{    )}
+\NormalTok{\}}
+
+\NormalTok{df\_both\_task }\OtherTok{\textless{}{-}} \FunctionTok{map\_dfr}\NormalTok{(task\_files\_1, load\_task)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Unique participants:"}\NormalTok{, }\FunctionTok{n\_distinct}\NormalTok{(df\_both\_task}\SpecialCharTok{$}\NormalTok{participant\_id), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Unique participants: 51
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_both\_task }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(boundary\_position, }\AttributeTok{name =} \StringTok{"Trial Count"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =} \StringTok{"Exp 1: Task Trial Counts by Boundary Position"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{), }\AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lr}
+\caption{\label{tab:exp1_task_count}Exp 1: Task Trial Counts by Boundary Position}\\
+\toprule
+boundary\_position & Trial Count\\
+\midrule
+Non & 10400\\
+Pre & 2080\\
+Post & 2080\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\subsection{1.2 Load Test Data}\label{load-test-data}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# CSV columns:}
+\CommentTok{\#   trials.thisN           {-}\textgreater{} trial row filter}
+\CommentTok{\#   image\_path             {-}\textgreater{} stimulus path}
+\CommentTok{\#   participant            {-}\textgreater{} participant ID}
+\CommentTok{\#   trials.key\_resp\_3.keys {-}\textgreater{} "o" = Old | "s" = Similar | "n" = New}
+\CommentTok{\# Stimulus type from image name: \^{}Foils = Foil | b.jpg = Lure | a.jpg = Target}
+
+\NormalTok{test\_files\_1 }\OtherTok{\textless{}{-}} \FunctionTok{list.files}\NormalTok{(}
+  \StringTok{"Both\_item\_task/both\_data"}\NormalTok{, }\AttributeTok{pattern =} \StringTok{"\_MST\_test\_.*}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.csv$"}\NormalTok{, }\AttributeTok{full.names =} \ConstantTok{TRUE}
+\NormalTok{)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Test files found:"}\NormalTok{, }\FunctionTok{length}\NormalTok{(test\_files\_1), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Test files found: 52
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{load\_test }\OtherTok{\textless{}{-}} \ControlFlowTok{function}\NormalTok{(file\_path) \{}
+\NormalTok{  df }\OtherTok{\textless{}{-}} \FunctionTok{suppressMessages}\NormalTok{(}\FunctionTok{read\_csv}\NormalTok{(file\_path, }\AttributeTok{show\_col\_types =} \ConstantTok{FALSE}\NormalTok{))}
+\NormalTok{  df }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(trials.thisN)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{transmute}\NormalTok{(}
+      \AttributeTok{participant\_id =} \FunctionTok{as.character}\NormalTok{(}\FunctionTok{as.integer}\NormalTok{(participant)),}
+      \AttributeTok{image\_name     =} \FunctionTok{basename}\NormalTok{(image\_path),}
+      \AttributeTok{stimulus\_type  =} \FunctionTok{case\_when}\NormalTok{(}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"(?i)\^{}foils"}\NormalTok{) }\SpecialCharTok{\textasciitilde{}} \StringTok{"Foil"}\NormalTok{,}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"b}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.jpg$"}\NormalTok{)   }\SpecialCharTok{\textasciitilde{}} \StringTok{"Lure"}\NormalTok{,}
+        \FunctionTok{str\_detect}\NormalTok{(image\_name, }\StringTok{"a}\SpecialCharTok{\textbackslash{}\textbackslash{}}\StringTok{.jpg$"}\NormalTok{)   }\SpecialCharTok{\textasciitilde{}} \StringTok{"Target"}\NormalTok{,}
+        \ConstantTok{TRUE}                                  \SpecialCharTok{\textasciitilde{}} \ConstantTok{NA\_character\_}
+\NormalTok{      ),}
+      \AttributeTok{response\_type =} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{        trials.key\_resp\_3.keys }\SpecialCharTok{==} \StringTok{"o"} \SpecialCharTok{\textasciitilde{}} \StringTok{"Old"}\NormalTok{,}
+\NormalTok{        trials.key\_resp\_3.keys }\SpecialCharTok{==} \StringTok{"s"} \SpecialCharTok{\textasciitilde{}} \StringTok{"Similar"}\NormalTok{,}
+\NormalTok{        trials.key\_resp\_3.keys }\SpecialCharTok{==} \StringTok{"n"} \SpecialCharTok{\textasciitilde{}} \StringTok{"New"}\NormalTok{,}
+        \ConstantTok{TRUE}                          \SpecialCharTok{\textasciitilde{}} \ConstantTok{NA\_character\_}
+\NormalTok{      )}
+\NormalTok{    )}
+\NormalTok{\}}
+
+\NormalTok{df\_both\_test }\OtherTok{\textless{}{-}} \FunctionTok{map\_dfr}\NormalTok{(test\_files\_1, load\_test)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Unique participants:"}\NormalTok{, }\FunctionTok{n\_distinct}\NormalTok{(df\_both\_test}\SpecialCharTok{$}\NormalTok{participant\_id), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Unique participants: 51
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Stimulus type counts:}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Stimulus type counts:
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{table}\NormalTok{(df\_both\_test}\SpecialCharTok{$}\NormalTok{stimulus\_type, }\AttributeTok{useNA =} \StringTok{"always"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+##   Foil   Lure Target   <NA> 
+##   1560   3120   3120      0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"In task only:"}\NormalTok{, }\FunctionTok{setdiff}\NormalTok{(}\FunctionTok{sort}\NormalTok{(}\FunctionTok{unique}\NormalTok{(df\_both\_task}\SpecialCharTok{$}\NormalTok{participant\_id)),}
+                              \FunctionTok{sort}\NormalTok{(}\FunctionTok{unique}\NormalTok{(df\_both\_test}\SpecialCharTok{$}\NormalTok{participant\_id))), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## In task only:
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"In test only:"}\NormalTok{, }\FunctionTok{setdiff}\NormalTok{(}\FunctionTok{sort}\NormalTok{(}\FunctionTok{unique}\NormalTok{(df\_both\_test}\SpecialCharTok{$}\NormalTok{participant\_id)),}
+                              \FunctionTok{sort}\NormalTok{(}\FunctionTok{unique}\NormalTok{(df\_both\_task}\SpecialCharTok{$}\NormalTok{participant\_id))), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## In test only:
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_both\_test }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(stimulus\_type), }\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(response\_type)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(stimulus\_type, response\_type) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ response\_type, }\AttributeTok{values\_from =}\NormalTok{ n, }\AttributeTok{values\_fill =} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =} \StringTok{"Exp 1: Test Response Counts by Stimulus Type"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{), }\AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lrrr}
+\caption{\label{tab:exp1_response_table}Exp 1: Test Response Counts by Stimulus Type}\\
+\toprule
+stimulus\_type & New & Old & Similar\\
+\midrule
+Foil & 1176 & 73 & 311\\
+Lure & 714 & 953 & 1453\\
+Target & 356 & 1992 & 772\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\subsection{1.3 Join Task and Test}\label{join-task-and-test}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_both\_labeled }\OtherTok{\textless{}{-}}\NormalTok{ df\_both\_task }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{left\_join}\NormalTok{(}
+\NormalTok{    df\_both\_test }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{filter}\NormalTok{(stimulus\_type }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"Target"}\NormalTok{, }\StringTok{"Lure"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{select}\NormalTok{(participant\_id, image\_name, stimulus\_type, response\_type) }\SpecialCharTok{\%\textgreater{}\%}
+      \FunctionTok{distinct}\NormalTok{(),}
+    \AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{"participant\_id"}\NormalTok{, }\StringTok{"image\_name"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(stimulus\_type), }\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(rt)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{stimulus\_type     =} \FunctionTok{factor}\NormalTok{(stimulus\_type, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Target"}\NormalTok{, }\StringTok{"Lure"}\NormalTok{)),}
+    \AttributeTok{boundary\_position =} \FunctionTok{factor}\NormalTok{(boundary\_position, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{, }\StringTok{"Pre"}\NormalTok{, }\StringTok{"Post"}\NormalTok{)),}
+    \AttributeTok{participant\_id    =} \FunctionTok{factor}\NormalTok{(participant\_id)}
+\NormalTok{  )}
+
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Rows after join:"}\NormalTok{, }\FunctionTok{nrow}\NormalTok{(df\_both\_labeled), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Rows after join: 3205
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Participants:"}\NormalTok{, }\FunctionTok{n\_distinct}\NormalTok{(df\_both\_labeled}\SpecialCharTok{$}\NormalTok{participant\_id), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Participants: 51
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{df\_both\_labeled }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{count}\NormalTok{(boundary\_position, stimulus\_type) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{pivot\_wider}\NormalTok{(}\AttributeTok{names\_from =}\NormalTok{ stimulus\_type, }\AttributeTok{values\_from =}\NormalTok{ n, }\AttributeTok{values\_fill =} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =} \StringTok{"Exp 1: RT Cell Counts (Boundary x Trial Type)"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{), }\AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lr}
+\caption{\label{tab:exp1_cell_count}Exp 1: RT Cell Counts (Boundary x Trial Type)}\\
+\toprule
+boundary\_position & Target\\
+\midrule
+Non & 1106\\
+Pre & 1051\\
+Post & 1048\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\subsection{1.4 SAP 2.2 --- Normality: Encoding
+RT}\label{sap-2.2-normality-encoding-rt}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{cells\_rt\_1 }\OtherTok{\textless{}{-}}\NormalTok{ df\_both\_labeled }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(boundary\_position, stimulus\_type) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{vals =} \FunctionTok{list}\NormalTok{(rt), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(boundary\_position, stimulus\_type, }\AttributeTok{sep =} \StringTok{" | "}\NormalTok{))}
+\FunctionTok{normality\_table}\NormalTok{(cells\_rt\_1, }\StringTok{"Exp 1: Shapiro{-}Wilk — Encoding RT by Cell"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lrrrr}
+\caption{\label{tab:exp1_rt_normality}Exp 1: Shapiro-Wilk — Encoding RT by Cell}\\
+\toprule
+Condition & n & W & p & Normal\\
+\midrule
+Non \&\#124; Target & 1106 & 0.7622 & 0 & No\\
+Pre \&\#124; Target & 1051 & 0.7490 & 0 & No\\
+Post \&\#124; Target & 1048 & 0.8544 & 0 & No\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p\_qq }\OtherTok{\textless{}{-}} \FunctionTok{wrap\_plots}\NormalTok{(}\FunctionTok{pmap}\NormalTok{(}\FunctionTok{list}\NormalTok{(cells\_rt\_1}\SpecialCharTok{$}\NormalTok{vals, cells\_rt\_1}\SpecialCharTok{$}\NormalTok{label),}
+                \ControlFlowTok{function}\NormalTok{(v, lbl) }\FunctionTok{qq\_plot}\NormalTok{(v[}\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(v)], lbl)), }\AttributeTok{ncol =} \DecValTok{3}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(p\_qq)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{exp1_files/figure-latex/exp1_rt_qq-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"figures\_report/exp1\_rt\_qq\_plots.png"}\NormalTok{, p\_qq, }\AttributeTok{width =} \DecValTok{14}\NormalTok{, }\AttributeTok{height =} \DecValTok{10}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{150}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.5 SAP 2.3 / 2.4 --- RT
+Analysis}\label{sap-2.3-2.4-rt-analysis}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{rt\_analysis}\NormalTok{(df\_both\_labeled, }\StringTok{"Experiment 1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## === Experiment 1 : RT Analysis (SAP 2.3 / 2.4) ===
+## N participants: 51 
+## 
+## Shapiro-Wilk on cell means: W = 0.8449, p = 0.0000 -> Non-normal -> KW fallback
+## 
+## --- Kruskal-Wallis: Main Effect of Boundary Position ---
+## 
+##  Kruskal-Wallis rank sum test
+## 
+## data:  values by grp
+## Kruskal-Wallis chi-squared = 14.135, df = 2, p-value = 0.0008522
+## 
+## 
+## --- Bonferroni Pairwise Wilcoxon: Boundary Position (SAP 2.4 fallback) ---
+## 
+##  Pairwise comparisons using Wilcoxon rank sum test with continuity correction 
+## 
+## data:  values and grp 
+## 
+##      Non     Pre    
+## Pre  0.58939 -      
+## Post 0.05957 0.00055
+## 
+## P value adjustment method: bonferroni 
+## 
+## --- Paired Wilcoxon: Main Effect of Trial Type (Target vs Lure) ---
+##   Skipped: Target and/or Lure column absent.
+##   Columns: participant_id, Target 
+## 
+## --- Interaction Proxy: Boundary within Target ---
+## 
+##  Kruskal-Wallis rank sum test
+## 
+## data:  values by grp
+## Kruskal-Wallis chi-squared = 14.135, df = 2, p-value = 0.0008522
+## 
+## 
+##  Pairwise comparisons using Wilcoxon rank sum test with continuity correction 
+## 
+## data:  values and grp 
+## 
+##      Non     Pre    
+## Pre  0.58939 -      
+## Post 0.05957 0.00055
+## 
+## P value adjustment method: bonferroni 
+## 
+## --- Interaction Proxy: Boundary within Lure ---
+##   Skipped - fewer than 2 groups with data: Lure boundary 
+##   Skipped - fewer than 2 groups with data: Lure boundary
+\end{verbatim}
+
+\subsection{1.6 RT Descriptives and
+Plot}\label{rt-descriptives-and-plot}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary\_table}\NormalTok{(}\FunctionTok{aggregate\_rt}\NormalTok{(df\_both\_labeled),}
+              \FunctionTok{c}\NormalTok{(}\StringTok{"boundary\_position"}\NormalTok{, }\StringTok{"stimulus\_type"}\NormalTok{),}
+              \StringTok{"mean\_rt"}\NormalTok{, }\StringTok{"Exp 1: Mean RT per Participant per Cell (ms)"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{llrrrrr}
+\caption{\label{tab:exp1_rt_desc}Exp 1: Mean RT per Participant per Cell (ms)}\\
+\toprule
+boundary\_position & stimulus\_type & n & Median & Mean & SD & IQR\\
+\midrule
+Non & Target & 51 & 1663.591 & 1722.244 & 468.537 & 497.331\\
+Pre & Target & 51 & 1528.934 & 1651.075 & 544.475 & 444.810\\
+Post & Target & 51 & 1817.356 & 1942.028 & 526.660 & 530.301\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Spaghetti: individual participant lines (grey) + group median + IQR}
+\CommentTok{\# Split by Trial Type to show Boundary x Trial Type pattern}
+\CommentTok{\# spaghetti\_grouped(}
+\CommentTok{\#  aggregate\_rt(df\_both\_labeled),}
+\CommentTok{\#  x\_var = "boundary\_position", y\_var = "mean\_rt", group\_var = "stimulus\_type",}
+\CommentTok{\#  title    = "Exp 1: Encoding RT by Boundary Condition",}
+\CommentTok{\#  subtitle = "Thin lines = participants | Bold lines = group median | Range = IQR",}
+\CommentTok{\#  x\_lab = "Boundary Position", y\_lab = "Mean RT per Participant (ms)"}
+\CommentTok{\#)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.7 SAP 3.1 --- REC and LDI}\label{sap-3.1-rec-and-ldi}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mst\_1 }\OtherTok{\textless{}{-}}\NormalTok{ df\_both\_test }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(participant\_id) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}
+    \AttributeTok{p\_old\_tgt  =} \FunctionTok{mean}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Target"} \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Old"}\NormalTok{,     }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{p\_old\_foil =} \FunctionTok{mean}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Foil"}   \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Old"}\NormalTok{,     }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{p\_sim\_lure =} \FunctionTok{mean}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}   \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Similar"}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{p\_sim\_foil =} \FunctionTok{mean}\NormalTok{(stimulus\_type }\SpecialCharTok{==} \StringTok{"Foil"}   \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Similar"}\NormalTok{, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+    \AttributeTok{.groups =} \StringTok{"drop"}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\AttributeTok{REC =}\NormalTok{ p\_old\_tgt }\SpecialCharTok{{-}}\NormalTok{ p\_old\_foil,}
+         \AttributeTok{LDI =}\NormalTok{ p\_sim\_lure }\SpecialCharTok{{-}}\NormalTok{ p\_sim\_foil)}
+
+\NormalTok{mst\_1 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(participant\_id, REC, LDI) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}\FunctionTok{across}\NormalTok{(}\FunctionTok{c}\NormalTok{(REC, LDI), }\SpecialCharTok{\textasciitilde{}} \FunctionTok{round}\NormalTok{(.x, }\DecValTok{3}\NormalTok{))) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{write\_csv}\NormalTok{(}\StringTok{"figures\_report/exp1\_rec\_ldi\_participant.csv"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =} \StringTok{"Exp 1: Per{-}Participant REC and LDI"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{), }\AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lrr}
+\caption{\label{tab:exp1_rec_ldi}Exp 1: Per-Participant REC and LDI}\\
+\toprule
+participant\_id & REC & LDI\\
+\midrule
+15 & 0.280 & 0.120\\
+16 & 0.280 & 0.240\\
+17 & 0.227 & 0.187\\
+18 & 0.307 & 0.067\\
+19 & 0.207 & 0.100\\
+\addlinespace
+20 & 0.133 & 0.167\\
+21 & 0.213 & 0.100\\
+22 & 0.247 & 0.053\\
+23 & 0.200 & 0.193\\
+24 & 0.347 & 0.100\\
+\addlinespace
+25 & 0.247 & 0.147\\
+26 & 0.193 & 0.200\\
+27 & 0.327 & 0.220\\
+28 & 0.220 & 0.133\\
+29 & 0.240 & 0.287\\
+\addlinespace
+30 & 0.147 & 0.120\\
+31 & 0.253 & 0.220\\
+32 & 0.320 & 0.067\\
+33 & 0.187 & 0.107\\
+34 & 0.200 & 0.240\\
+\addlinespace
+36 & 0.240 & 0.060\\
+37 & 0.300 & 0.033\\
+38 & 0.173 & 0.180\\
+39 & 0.313 & 0.127\\
+40 & 0.307 & 0.107\\
+\addlinespace
+41 & 0.187 & 0.293\\
+42 & 0.200 & 0.073\\
+43 & 0.207 & 0.113\\
+44 & 0.333 & 0.087\\
+45 & 0.240 & 0.113\\
+\addlinespace
+46 & 0.273 & 0.080\\
+47 & 0.253 & 0.213\\
+49 & 0.173 & 0.147\\
+50 & 0.273 & 0.187\\
+51 & 0.253 & 0.193\\
+\addlinespace
+52 & 0.240 & 0.093\\
+53 & 0.233 & 0.207\\
+54 & 0.333 & 0.127\\
+55 & 0.167 & 0.080\\
+56 & 0.253 & 0.140\\
+\addlinespace
+57 & 0.233 & 0.200\\
+58 & 0.220 & 0.093\\
+59 & 0.287 & 0.193\\
+60 & 0.240 & 0.167\\
+61 & 0.227 & 0.113\\
+\addlinespace
+62 & 0.320 & 0.120\\
+63 & 0.247 & 0.160\\
+64 & 0.207 & 0.147\\
+65 & 0.260 & 0.220\\
+66 & 0.327 & 0.253\\
+\addlinespace
+67 & 0.313 & 0.120\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mst\_1 }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{REC\_Median =} \FunctionTok{round}\NormalTok{(}\FunctionTok{median}\NormalTok{(REC), }\DecValTok{3}\NormalTok{), }\AttributeTok{REC\_IQR =} \FunctionTok{round}\NormalTok{(}\FunctionTok{IQR}\NormalTok{(REC), }\DecValTok{3}\NormalTok{),}
+            \AttributeTok{LDI\_Median =} \FunctionTok{round}\NormalTok{(}\FunctionTok{median}\NormalTok{(LDI), }\DecValTok{3}\NormalTok{), }\AttributeTok{LDI\_IQR =} \FunctionTok{round}\NormalTok{(}\FunctionTok{IQR}\NormalTok{(LDI), }\DecValTok{3}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{write\_csv}\NormalTok{(}\StringTok{"figures\_report/exp1\_rec\_ldi\_group.csv"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable}\NormalTok{(}\AttributeTok{caption =} \StringTok{"Exp 1: Group REC and LDI"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{kable\_styling}\NormalTok{(}\AttributeTok{bootstrap\_options =} \FunctionTok{c}\NormalTok{(}\StringTok{"striped"}\NormalTok{,}\StringTok{"hover"}\NormalTok{), }\AttributeTok{full\_width =} \ConstantTok{FALSE}\NormalTok{, }\AttributeTok{font\_size =} \DecValTok{12}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{rrrr}
+\caption{\label{tab:exp1_rec_ldi}Exp 1: Group REC and LDI}\\
+\toprule
+REC\_Median & REC\_IQR & LDI\_Median & LDI\_IQR\\
+\midrule
+0.24 & 0.077 & 0.133 & 0.093\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{p\_rec\_ldi }\OtherTok{\textless{}{-}} \FunctionTok{rec\_ldi\_plot}\NormalTok{(mst\_1, }\StringTok{"REC"}\NormalTok{, }\StringTok{"LDI"}\NormalTok{, }\StringTok{"Exp 1: REC and LDI"}\NormalTok{)}
+\FunctionTok{print}\NormalTok{(p\_rec\_ldi)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{center}\includegraphics{exp1_files/figure-latex/exp1_rec_ldi-1} \end{center}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggsave}\NormalTok{(}\StringTok{"figures\_report/exp1\_rec\_ldi\_plot.png"}\NormalTok{, p\_rec\_ldi, }\AttributeTok{width =} \DecValTok{6}\NormalTok{, }\AttributeTok{height =} \DecValTok{5}\NormalTok{, }\AttributeTok{dpi =} \DecValTok{150}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.8 SAP 3.2 / 4 --- Memory Accuracy by Boundary
+Condition}\label{sap-3.2-4-memory-accuracy-by-boundary-condition}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bp\_1 }\OtherTok{\textless{}{-}}\NormalTok{ df\_both\_test }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{left\_join}\NormalTok{(df\_both\_task }\SpecialCharTok{\%\textgreater{}\%}
+              \FunctionTok{select}\NormalTok{(participant\_id, image\_name, boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+              \FunctionTok{distinct}\NormalTok{(),}
+            \AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{"participant\_id"}\NormalTok{, }\StringTok{"image\_name"}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{filter}\NormalTok{(stimulus\_type }\SpecialCharTok{\%in\%} \FunctionTok{c}\NormalTok{(}\StringTok{"Target"}\NormalTok{, }\StringTok{"Lure"}\NormalTok{), }\SpecialCharTok{!}\FunctionTok{is.na}\NormalTok{(boundary\_position)) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{mutate}\NormalTok{(}
+    \AttributeTok{boundary\_position =} \FunctionTok{factor}\NormalTok{(boundary\_position, }\AttributeTok{levels =} \FunctionTok{c}\NormalTok{(}\StringTok{"Non"}\NormalTok{, }\StringTok{"Pre"}\NormalTok{, }\StringTok{"Post"}\NormalTok{)),}
+    \AttributeTok{lure\_correct      =}\NormalTok{ (stimulus\_type }\SpecialCharTok{==} \StringTok{"Lure"}   \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Similar"}\NormalTok{),}
+    \AttributeTok{target\_hit        =}\NormalTok{ (stimulus\_type }\SpecialCharTok{==} \StringTok{"Target"} \SpecialCharTok{\&}\NormalTok{ response\_type }\SpecialCharTok{==} \StringTok{"Old"}\NormalTok{)}
+\NormalTok{  ) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{group\_by}\NormalTok{(participant\_id, boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarise}\NormalTok{(}\AttributeTok{lure\_CR    =} \FunctionTok{mean}\NormalTok{(lure\_correct, }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+            \AttributeTok{target\_hit =} \FunctionTok{mean}\NormalTok{(target\_hit,   }\AttributeTok{na.rm =} \ConstantTok{TRUE}\NormalTok{),}
+            \AttributeTok{.groups    =} \StringTok{"drop"}\NormalTok{)}
+
+\FunctionTok{cat}\NormalTok{(}\StringTok{"Participants in accuracy data:"}\NormalTok{, }\FunctionTok{n\_distinct}\NormalTok{(bp\_1}\SpecialCharTok{$}\NormalTok{participant\_id), }\StringTok{"}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Participants in accuracy data: 51
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{normality\_table}\NormalTok{(}
+\NormalTok{  bp\_1 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{vals =} \FunctionTok{list}\NormalTok{(lure\_CR), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Lure CR |"}\NormalTok{, boundary\_position)),}
+  \StringTok{"Exp 1: Shapiro{-}Wilk — Lure CR by Boundary"}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lrrrr}
+\caption{\label{tab:exp1_acc_normality}Exp 1: Shapiro-Wilk — Lure CR by Boundary}\\
+\toprule
+Condition & n & W & p & Normal\\
+\midrule
+Lure CR \&\#124; Non & 51 & NA & NA & Identical values\\
+Lure CR \&\#124; Pre & 51 & NA & NA & Identical values\\
+Lure CR \&\#124; Post & 51 & NA & NA & Identical values\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{normality\_table}\NormalTok{(}
+\NormalTok{  bp\_1 }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{group\_by}\NormalTok{(boundary\_position) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{summarise}\NormalTok{(}\AttributeTok{vals =} \FunctionTok{list}\NormalTok{(target\_hit), }\AttributeTok{.groups =} \StringTok{"drop"}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{label =} \FunctionTok{paste}\NormalTok{(}\StringTok{"Target Hit |"}\NormalTok{, boundary\_position)),}
+  \StringTok{"Exp 1: Shapiro{-}Wilk — Target Hit by Boundary"}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{lrrrr}
+\caption{\label{tab:exp1_acc_normality}Exp 1: Shapiro-Wilk — Target Hit by Boundary}\\
+\toprule
+Condition & n & W & p & Normal\\
+\midrule
+Target Hit \&\#124; Non & 51 & 0.9636 & 0.1187 & Yes\\
+Target Hit \&\#124; Pre & 51 & 0.9694 & 0.2085 & Yes\\
+Target Hit \&\#124; Post & 51 & 0.9700 & 0.2207 & Yes\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary\_table}\NormalTok{(bp\_1, }\StringTok{"boundary\_position"}\NormalTok{, }\StringTok{"lure\_CR"}\NormalTok{,}
+              \StringTok{"Exp 1: Lure Correct Rejection Rate"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{llrrrr}
+\caption{\label{tab:exp1_acc_desc}Exp 1: Lure Correct Rejection Rate}\\
+\toprule
+boundary\_position & n & Median & Mean & SD & IQR\\
+\midrule
+Non & 51 & 0 & 0 & 0 & 0\\
+Pre & 51 & 0 & 0 & 0 & 0\\
+Post & 51 & 0 & 0 & 0 & 0\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary\_table}\NormalTok{(bp\_1, }\StringTok{"boundary\_position"}\NormalTok{, }\StringTok{"target\_hit"}\NormalTok{,}
+              \StringTok{"Exp 1: Target Hit Rate"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begingroup\fontsize{12}{14}\selectfont
+
+\begin{longtable}[t]{llrrrr}
+\caption{\label{tab:exp1_acc_desc}Exp 1: Target Hit Rate}\\
+\toprule
+boundary\_position & n & Median & Mean & SD & IQR\\
+\midrule
+Non & 51 & 0.65 & 0.669 & 0.167 & 0.25\\
+Pre & 51 & 0.65 & 0.656 & 0.146 & 0.20\\
+Post & 51 & 0.60 & 0.599 & 0.162 & 0.20\\
+\bottomrule
+\end{longtable}
+\endgroup{}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Spaghetti plots: grey = individual participants, blue = group median + IQR band}
+\CommentTok{\# p1a \textless{}{-} spaghetti\_plot(bp\_1, "boundary\_position", "lure\_CR",}
+\CommentTok{\#                      title    = "Lure Correct Rejection",}
+\CommentTok{\#                      subtitle = "Thin = participants | Bold = median + IQR",}
+\CommentTok{\#                      x\_lab = "Boundary Position", y\_lab = "Proportion Correct")}
+\CommentTok{\# p1b \textless{}{-} spaghetti\_plot(bp\_1, "boundary\_position", "target\_hit",}
+\CommentTok{\#                     title    = "Target Hit Rate",}
+\CommentTok{\#                      subtitle = "Thin = participants | Bold = median + IQR",}
+\CommentTok{\#                      x\_lab = "Boundary Position", y\_lab = "Proportion Correct")}
+\CommentTok{\# (p1a | p1b) +}
+\CommentTok{\#  plot\_annotation(title = "Exp 1: Memory Accuracy by Boundary Condition")}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.9 SAP 5 / 6 --- Repeated-Measures Analysis +
+Post-Hoc}\label{sap-5-6-repeated-measures-analysis-post-hoc}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# SAP 5 requires RM analysis for: lure\_CR, target\_hit, REC, and LDI}
+\CommentTok{\# REC and LDI are participant{-}level scalars (not broken by boundary) so}
+\CommentTok{\# RM analysis across boundary conditions cannot be run for them here.}
+\CommentTok{\# They are reported descriptively in section 1.7 above.}
+\CommentTok{\# If a boundary{-}stratified REC/LDI is computed in future, run rm\_analysis() on those.}
+
+\FunctionTok{rm\_analysis}\NormalTok{(bp\_1, }\StringTok{"lure\_CR"}\NormalTok{,    }\AttributeTok{label =} \StringTok{"Exp 1: Lure CR"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## --- Exp 1: Lure CR : RM Analysis (SAP 5 / 6) ---
+##   Participants included: 51 | Dropped (incomplete): 0 
+## 
+##  Friedman rank sum test
+## 
+## data:  mat
+## Friedman chi-squared = NaN, df = 2, p-value = NA
+## 
+## 
+##   Bonferroni pairwise Wilcoxon (SAP 6):
+## \begingroup\fontsize{12}{14}\selectfont
+## 
+## \begin{longtable}[t]{lrrrc}
+## \caption{\label{tab:exp1_rm}Bonferroni Post-Hoc (Wilcoxon) - Exp 1: Lure CR}\\
+## \toprule
+## Comparison & W & p\_raw & p\_bonferroni & Significant\\
+## \midrule
+## Non vs Pre & 1300.5 & NaN & NaN & NA\\
+## Non vs Post & 1300.5 & NaN & NaN & NA\\
+## Pre vs Post & 1300.5 & NaN & NaN & NA\\
+## \bottomrule
+## \end{longtable}
+## \endgroup{}
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{rm\_analysis}\NormalTok{(bp\_1, }\StringTok{"target\_hit"}\NormalTok{, }\AttributeTok{label =} \StringTok{"Exp 1: Target Hit"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## --- Exp 1: Target Hit : RM Analysis (SAP 5 / 6) ---
+##   Participants included: 51 | Dropped (incomplete): 0 
+##   Shapiro-Wilk: W = 0.9786, p = 0.0176 -> Non-normal -> Friedman
+## 
+##  Friedman rank sum test
+## 
+## data:  mat
+## Friedman chi-squared = 12.032, df = 2, p-value = 0.002439
+## 
+## 
+##   Bonferroni pairwise Wilcoxon (SAP 6):
+## \begingroup\fontsize{12}{14}\selectfont
+## 
+## \begin{longtable}[t]{lrrrc}
+## \caption{\label{tab:exp1_rm}Bonferroni Post-Hoc (Wilcoxon) - Exp 1: Target Hit}\\
+## \toprule
+## Comparison & W & p\_raw & p\_bonferroni & Significant\\
+## \midrule
+## Non vs Pre & 1406.0 & 0.4798 & 1.0000 & No\\
+## Non vs Post & 1632.5 & 0.0259 & 0.0777 & No\\
+## Pre vs Post & 1561.5 & 0.0799 & 0.2397 & No\\
+## \bottomrule
+## \end{longtable}
+## \endgroup{}
+\end{verbatim}
+
+\subsection{1.10 SAP 7 / 7.1 --- Boundary vs Baseline Difference
+Scores}\label{sap-7-7.1-boundary-vs-baseline-difference-scores}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# diff\_1 \textless{}{-} compute\_diff\_scores(bp\_1)}
+
+\CommentTok{\# diff\_1 \%\textgreater{}\%}
+\CommentTok{\#   select(participant\_id, lure\_pre\_diff, lure\_post\_diff,}
+\CommentTok{\#          target\_pre\_diff, target\_post\_diff) \%\textgreater{}\%}
+\CommentTok{\#   mutate(across(where(is.numeric), \textasciitilde{} round(.x, 3))) \%\textgreater{}\%}
+\CommentTok{\#   kable(caption = "Exp 1: Difference Scores per Participant") \%\textgreater{}\%}
+\CommentTok{\#   kable\_styling(bootstrap\_options = c("striped","hover"), full\_width = FALSE, font\_size = 11)}
+
+\CommentTok{\# one\_sample\_test\_adaptive(diff\_1$lure\_pre\_diff,    "Lure CR: Pre {-} Non (Exp 1)")}
+\CommentTok{\# one\_sample\_test\_adaptive(diff\_1$lure\_post\_diff,   "Lure CR: Post {-} Non (Exp 1)")}
+\CommentTok{\# one\_sample\_test\_adaptive(diff\_1$target\_pre\_diff,  "Target Hit: Pre {-} Non (Exp 1)")}
+\CommentTok{\# one\_sample\_test\_adaptive(diff\_1$target\_post\_diff, "Target Hit: Post {-} Non (Exp 1)")}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# diff\_score\_plot(diff\_1, "Exp 1: Difference Scores Relative to Non{-}Boundary Baseline")}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.11 SAP 8 --- Pre vs Post: Paired
+Test}\label{sap-8-pre-vs-post-paired-test}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# paired\_test\_adaptive(bp\_1, "lure\_CR",    "Exp 1: Lure CR")}
+\CommentTok{\# paired\_test\_adaptive(bp\_1, "target\_hit", "Exp 1: Target Hit")}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{1.12 SAP 9 --- Linear Mixed-Effects
+Model}\label{sap-9-linear-mixed-effects-model}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{run\_lme\_trial}\NormalTok{(df\_both\_labeled, }\StringTok{"Exp 1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## === Exp 1 : LME Models (SAP 9) ===
+## Formula: correct ~ boundary_position + (1 | participant_id)
+## 
+## --- Lure Correct Rejection ---
+##   Too few participants.
+## 
+## --- Target Hit Rate ---
+## Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+## lmerModLmerTest]
+## Formula: target_hit ~ boundary_position + (1 | participant_id)
+##    Data: df_t
+## 
+## REML criterion at convergence: 4293.3
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -1.8193 -1.1287  0.4928  0.8131  1.3274 
+## 
+## Random effects:
+##  Groups         Name        Variance Std.Dev.
+##  participant_id (Intercept) 0.01479  0.1216  
+##  Residual                   0.21668  0.4655  
+## Number of obs: 3205, groups:  participant_id, 51
+## 
+## Fixed effects:
+##                         Estimate Std. Error         df t value Pr(>|t|)    
+## (Intercept)              0.66491    0.02218   94.49160  29.973   <2e-16 ***
+## boundary_positionPre    -0.01105    0.02011 3155.91806  -0.549   0.5829    
+## boundary_positionPost   -0.06289    0.02013 3156.03773  -3.124   0.0018 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Correlation of Fixed Effects:
+##              (Intr) bndry_pstnPr
+## bndry_pstnPr -0.448             
+## bndry_pstnPs -0.448  0.490      
+## 
+## Anova (Type III):
+## Type III Analysis of Variance Table with Satterthwaite's method
+##                   Sum Sq Mean Sq NumDF  DenDF F value   Pr(>F)   
+## boundary_position 2.3896  1.1948     2 3154.9  5.5141 0.004069 **
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+\end{verbatim}
+
+\subsection{1.13 SAP 10 --- Lure Similarity Bin
+Analysis}\label{sap-10-lure-similarity-bin-analysis}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{lure\_bin\_analysis}\NormalTok{(df\_both\_test, df\_both\_task, }\StringTok{"Exp 1"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## === Exp 1 : Lure Similarity Bin Analysis (SAP 10) ===
+## 
+## No similarity bin information found in image names.
+## Sample lure image names:
+##  [1] "Objects\\132b.jpg" "Scenes\\019b.jpg"  "Scenes\\192b.jpg" 
+##  [4] "Scenes\\169b.jpg"  "Objects\\055b.jpg" "Objects\\036b.jpg"
+##  [7] "Scenes\\061b.jpg"  "Objects\\018b.jpg" "Objects\\100b.jpg"
+## [10] "Scenes\\018b.jpg"
+\end{verbatim}
+
+\end{document}

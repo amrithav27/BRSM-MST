@@ -3,18 +3,12 @@ title: "Project Phase 1 Analysis EXP1"
 author: "Team Popcorn - Amritha, Ahana, Keerthana"
 date: "05/3/2026"
 output:
-  html_document:
-    toc: yes
-    toc_float: yes
-    toc_depth: 3
-    theme: flatly
-    highlight: tango
-    df_print: paged
   pdf_document:
     toc: yes
     toc_depth: 3
     highlight: tango
     latex_engine: xelatex
+  
 ---
 
 ```{r setup, include=FALSE}
