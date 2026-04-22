@@ -825,3 +825,490 @@ ggplot(emm_all, aes(x = boundary, y = emmean, fill = boundary)) +
 
 cat("\n=========== ANOVA PLOT COMPLETE ===========\n")
 ```
+
+boundary effect is significant (p < .001)
+
+### Post HOC Test using EMM
+Post-hoc tests using EMM allow us to identify specific differences between conditions while correctly accounting for within-subject dependencies and interaction effects.
+
+```{r}
+# -----------------------------------------
+# POST-HOC: REACTION TIME
+# -----------------------------------------
+
+cat("\n==== POST-HOC: REACTION TIME ====\n")
+
+for(exp in unique(rt_summary$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- rt_summary %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "mean_rt",
+    data = data_exp,
+    within = "boundary"
+  )
+  
+  emm <- emmeans(model, ~ boundary)
+  
+  # Pairwise comparisons
+  pairwise <- pairs(emm, adjust = "bonferroni")
+  print(pairwise)
+}
+```
+No significant differences in reaction time were observed across boundary conditions in the item-only experiment (all p > .05).
+
+Reaction times for Post-boundary items were significantly higher than both Non-boundary and Pre-boundary items (p < .001), while no difference was observed between Pre- and Non-boundary conditions.
+
+Post-boundary reaction times were significantly higher than both Pre- and Non-boundary conditions (p < .001), with no difference between Pre and Non conditions.
+
+Reaction time analyses revealed that event boundaries produced a significant processing cost in the both and task-only conditions, reflected by slower responses for Post-boundary items. However, no such effect was observed in the item-only condition, suggesting that perceptual shifts alone are insufficient to induce boundary-related processing costs. This pattern is consistent with Morse et al. (2023), who found that event boundaries only exert reliable cognitive effects when defined by a combination of perceptual and task-related changes, whereas perceptual shifts alone fail to produce strong boundary-related influences.
+
+### One-Sample t-tests (Boundary vs Baseline)
+
+```{r}
+#--------------------------------------------
+# STEP 0: CREATE COPIES (DO NOT MODIFY ORIGINALS)
+#--------------------------------------------
+task_copy <- task_all
+test_copy <- test_clean
+
+
+#--------------------------------------------
+# STEP 1: CREATE BASE ID (FIX a/b ISSUE)
+#--------------------------------------------
+task_copy <- task_copy %>%
+  mutate(base_id = gsub("[ab]\\.jpg$", "", image_name))
+
+test_copy <- test_copy %>%
+  mutate(base_id = gsub("[ab]\\.jpg$", "", image_name))
+
+
+#--------------------------------------------
+# STEP 2: CREATE BOUNDARY MAP FROM ENCODING
+#--------------------------------------------
+boundary_map <- task_copy %>%
+  mutate(
+    event_position = ((trial_number - 1) %% 7) + 1,
+    boundary = case_when(
+      event_position == 1 ~ "Post",
+      event_position == 7 ~ "Pre",
+      TRUE ~ "Non"
+    )
+  ) %>%
+  select(participant_id, base_id, boundary) %>%
+  group_by(participant_id, base_id) %>%
+  summarise(boundary = first(boundary), .groups = "drop")
+
+
+#--------------------------------------------
+# STEP 3: ATTACH BOUNDARY TO TEST DATA
+#--------------------------------------------
+test_with_boundary <- test_copy %>%
+  left_join(boundary_map, by = c("participant_id", "base_id"))
+
+
+#--------------------------------------------
+# HELPER FUNCTION
+#--------------------------------------------
+safe_div <- function(num, den){
+  ifelse(den > 0, num / den, NA_real_)
+}
+
+
+#--------------------------------------------
+# STEP 4: FOIL RATES (GLOBAL BASELINE)
+#--------------------------------------------
+foil_rates <- test_with_boundary %>%
+  group_by(participant_id, experiment) %>%
+  summarise(
+    n_foil = sum(stimulus_type == "Foil"),
+    
+    fa_old_foil = sum(stimulus_type == "Foil" & response == "Old"),
+    fa_sim_foil = sum(stimulus_type == "Foil" & response == "Similar"),
+    
+    p_old_foil = safe_div(fa_old_foil, n_foil),
+    p_sim_foil = safe_div(fa_sim_foil, n_foil),
+    
+    .groups = "drop"
+  )
+
+
+#--------------------------------------------
+# STEP 5: TARGET + LURE PER BOUNDARY
+#--------------------------------------------
+boundary_rates <- test_with_boundary %>%
+  filter(!is.na(boundary)) %>%
+  group_by(participant_id, experiment, boundary) %>%
+  summarise(
+    n_target = sum(stimulus_type == "Target"),
+    n_lure   = sum(stimulus_type == "Lure"),
+    
+    hit_target = sum(stimulus_type == "Target" & response == "Old"),
+    correct_lure = sum(stimulus_type == "Lure" & response == "Similar"),
+    
+    p_old_target = safe_div(hit_target, n_target),
+    p_sim_lure   = safe_div(correct_lure, n_lure),
+    
+    .groups = "drop"
+  )
+
+
+#--------------------------------------------
+# STEP 6: COMBINE → FINAL DATA
+#--------------------------------------------
+mst_boundary <- boundary_rates %>%
+  left_join(foil_rates, by = c("participant_id", "experiment")) %>%
+  mutate(
+    REC = p_old_target - p_old_foil,
+    LDI = p_sim_lure - p_sim_foil
+  )
+
+
+#--------------------------------------------
+# STEP 7: VERIFY (CRITICAL CHECKS)
+#--------------------------------------------
+cat("\nBoundary counts:\n")
+print(mst_boundary %>% count(boundary))
+
+cat("\nLDI summary:\n")
+print(summary(mst_boundary$LDI))
+
+cat("\nREC summary:\n")
+print(summary(mst_boundary$REC))
+
+cat("\nCheck lure availability:\n")
+print(
+  mst_boundary %>%
+    summarise(
+      zero_lure = sum(n_lure == 0, na.rm = TRUE),
+      total = n()
+    )
+)
+
+
+#--------------------------------------------
+# STEP 8: ONE-SAMPLE T-TESTS (LDI)
+#--------------------------------------------
+cat("\n==== ONE-SAMPLE TEST: LDI ====\n")
+
+for(exp in unique(mst_boundary$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_boundary %>% filter(experiment == exp)
+  
+  pre  <- data_exp %>% filter(boundary == "Pre") %>% pull(LDI)
+  non  <- data_exp %>% filter(boundary == "Non") %>% pull(LDI)
+  post <- data_exp %>% filter(boundary == "Post") %>% pull(LDI)
+  
+  diff_pre  <- pre - non
+  diff_post <- post - non
+  
+  diff_pre  <- diff_pre[!is.na(diff_pre)]
+  diff_post <- diff_post[!is.na(diff_post)]
+  
+  if(length(diff_pre) > 1){
+    cat("\nPre vs Non:\n")
+    print(t.test(diff_pre, mu = 0))
+  }
+  
+  if(length(diff_post) > 1){
+    cat("\nPost vs Non:\n")
+    print(t.test(diff_post, mu = 0))
+  }
+}
+
+
+#--------------------------------------------
+# STEP 9: ONE-SAMPLE T-TESTS (REC)
+#--------------------------------------------
+cat("\n==== ONE-SAMPLE TEST: REC ====\n")
+
+for(exp in unique(mst_boundary$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_boundary %>% filter(experiment == exp)
+  
+  pre  <- data_exp %>% filter(boundary == "Pre") %>% pull(REC)
+  non  <- data_exp %>% filter(boundary == "Non") %>% pull(REC)
+  post <- data_exp %>% filter(boundary == "Post") %>% pull(REC)
+  
+  diff_pre  <- pre - non
+  diff_post <- post - non
+  
+  diff_pre  <- diff_pre[!is.na(diff_pre)]
+  diff_post <- diff_post[!is.na(diff_post)]
+  
+  if(length(diff_pre) > 1){
+    cat("\nPre vs Non:\n")
+    print(t.test(diff_pre, mu = 0))
+  }
+  
+  if(length(diff_post) > 1){
+    cat("\nPost vs Non:\n")
+    print(t.test(diff_post, mu = 0))
+  }
+}
+
+
+# VISUALIZATION CODE
+
+#----------------------------------------------------------
+# Mean LDI & REC by Boundary
+#----------------------------------------------------------
+library(ggplot2)
+
+mst_long <- mst_boundary %>%
+  select(participant_id, experiment, boundary, LDI, REC) %>%
+  tidyr::pivot_longer(cols = c(LDI, REC), names_to = "metric", values_to = "value")
+
+ggplot(mst_long, aes(x = boundary, y = value, fill = boundary)) +
+  stat_summary(fun = mean, geom = "bar", alpha = 0.8) +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  facet_grid(metric ~ experiment) +
+  labs(
+    title = "Memory Performance by Boundary Condition",
+    x = "Boundary",
+    y = "Score"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+#----------------------------------------------------------
+# Participant-Level Distribution
+#----------------------------------------------------------
+ggplot(mst_long, aes(x = boundary, y = value, fill = boundary)) +
+  geom_violin(alpha = 0.5) +
+  geom_boxplot(width = 0.2, fill = "white") +
+  facet_grid(metric ~ experiment) +
+  labs(
+    title = "Distribution of LDI and REC Across Participants",
+    x = "Boundary Condition",
+    y = "Score"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+#----------------------------------------------------------
+# Difference Scores
+#----------------------------------------------------------
+diff_data <- mst_boundary %>%
+  tidyr::pivot_wider(names_from = boundary, values_from = c(LDI, REC)) %>%
+  mutate(
+    LDI_pre_diff  = LDI_Pre - LDI_Non,
+    LDI_post_diff = LDI_Post - LDI_Non,
+    REC_pre_diff  = REC_Pre - REC_Non,
+    REC_post_diff = REC_Post - REC_Non
+  ) %>%
+  select(participant_id, experiment, starts_with("LDI"), starts_with("REC")) %>%
+  tidyr::pivot_longer(
+    cols = -c(participant_id, experiment),
+    names_to = "condition",
+    values_to = "value"
+  )
+
+ggplot(diff_data, aes(x = condition, y = value, fill = condition)) +
+  stat_summary(fun = mean, geom = "bar") +
+  stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+  facet_wrap(~experiment) +
+  labs(
+    title = "Difference from Non-Boundary Baseline",
+    x = "Condition",
+    y = "Difference Score"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#---------------------------------------------------------------
+# Quick Summary Plot
+#--------------------------------------------------------------
+mst_boundary %>%
+  group_by(experiment, boundary) %>%
+  summarise(
+    mean_LDI = mean(LDI, na.rm = TRUE),
+    mean_REC = mean(REC, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(x = boundary, y = mean_REC, group = experiment, color = experiment)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  facet_wrap(~experiment) +
+  labs(
+    title = "Recognition Performance Across Boundaries",
+    y = "Mean REC"
+  ) +
+  theme_minimal(base_size = 14)
+```
+LDI Results (Pattern Separation)
+
+One-sample t-tests compared boundary conditions against the Non-boundary baseline.
+
+Across all three experiments (item_only, both, task_only), no significant differences in LDI were observed:
+
+item_only
+Pre vs Non: p = 0.396
+Post vs Non: p = 0.595
+both
+Pre vs Non: p = 0.363
+Post vs Non: p = 0.147
+task_only
+Pre vs Non: p = 0.317
+Post vs Non: p = 0.249
+Although LDI values were generally positive (Mean ≈ 0.33), indicating successful lure discrimination overall, event boundaries did not significantly modulate pattern separation.
+
+REC Results (Recognition Memory)
+
+Recognition performance showed condition-specific effects:
+
+item_only
+No significant differences (all p > 0.1)
+both
+Post vs Non: significant decrease
+t(50) = -3.31, p = 0.0017
+Indicates reduced recognition after boundaries
+task_only
+Pre vs Non: significant increase
+t(52) = 2.15, p = 0.036
+Indicates enhanced recognition before boundaries
+
+
+These findings suggest a dissociation between memory processes:
+
+Pattern separation (LDI) remains stable across event boundaries
+Recognition (REC) is sensitive to boundary structure:
+Pre-boundary enhancement (task_only)
+Post-boundary impairment (both condition)
+
+This partially aligns with the original study, where event boundaries influence memory encoding, but extends it by showing that effects are stronger for recognition than for pattern separation.
+
+# Paired t-test (Pre vs Post)
+
+The comparison between Pre- and Post-boundary conditions was conducted using a paired-samples t-test rather than an independent-samples t-test. This choice is justified because the same participants contributed data to both conditions, making the observations dependent (within-subject design).
+
+In this experiment, each participant provides memory scores (LDI and REC) for Pre-boundary and Post-boundary items. These measurements are therefore not independent, as they are influenced by shared individual factors such as baseline memory ability, attention, and response tendencies. A paired t-test accounts for this dependency by analyzing within-subject differences, thereby reducing variability due to individual differences and increasing statistical power.
+
+In contrast, an independent-samples t-test assumes that observations across groups are unrelated, which would violate the assumptions of the current experimental design and potentially lead to incorrect inferences.
+```{r}
+#---------------------------------------------------------
+# STEP 1: RESHAPE DATA
+#---------------------------------------------------------
+library(tidyr)
+
+mst_wide <- mst_boundary %>%
+  select(participant_id, experiment, boundary, LDI, REC) %>%
+  pivot_wider(
+    names_from = boundary,
+    values_from = c(LDI, REC)
+  )
+#---------------------------------------------------------
+# STEP 2: PAIRED T-TEST (LDI)
+#---------------------------------------------------------
+cat("\n==== PAIRED TEST: LDI (Pre vs Post) ====\n")
+
+for(exp in unique(mst_wide$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_wide %>% filter(experiment == exp)
+  
+  pre  <- data_exp$LDI_Pre
+  post <- data_exp$LDI_Post
+  
+  # remove NA pairs
+  valid <- !is.na(pre) & !is.na(post)
+  
+  if(sum(valid) > 1){
+    print(t.test(pre[valid], post[valid], paired = TRUE))
+  }
+}
+#---------------------------------------------------------
+# STEP 3: PAIRED T-TEST (REC)
+#---------------------------------------------------------
+cat("\n==== PAIRED TEST: REC (Pre vs Post) ====\n")
+
+for(exp in unique(mst_wide$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_wide %>% filter(experiment == exp)
+  
+  pre  <- data_exp$REC_Pre
+  post <- data_exp$REC_Post
+  
+  valid <- !is.na(pre) & !is.na(post)
+  
+  if(sum(valid) > 1){
+    print(t.test(pre[valid], post[valid], paired = TRUE))
+  }
+}
+#---------------------------------------------------------
+# VISUAL
+#---------------------------------------------------------
+mst_wide %>%
+  pivot_longer(cols = c(LDI_Pre, LDI_Post), 
+               names_to = "condition", values_to = "value") %>%
+  ggplot(aes(x = condition, y = value, fill = condition)) +
+  geom_boxplot() +
+  facet_wrap(~experiment) +
+  labs(title = "LDI: Pre vs Post Comparison") +
+  theme_minimal()
+```
+
+To directly compare memory performance across event boundaries, paired-samples t-tests were conducted between Pre-boundary and Post-boundary conditions for both LDI and REC. This analysis captures within-subject differences in memory performance across boundary transitions.
+
+🔹 Lure Discrimination Index (LDI)
+
+Across all experimental conditions, no significant differences were observed between Pre- and Post-boundary items:
+
+item_only: t(55) = -1.13, p = 0.262
+both: t(50) = 0.61, p = 0.545
+task_only: t(52) = -0.34, p = 0.738
+
+👉 Although mean differences varied slightly across conditions, none reached statistical significance.
+
+🧠 Interpretation
+
+These results indicate that pattern separation (LDI) is not significantly influenced by event boundaries, suggesting that the ability to discriminate similar items remains stable across boundary transitions.
+
+🔹 Recognition Memory (REC)
+
+Recognition performance showed a condition-specific effect:
+
+item_only:
+t(55) = -1.78, p = 0.080 (marginal, not significant)
+both:
+t(50) = 2.94, p = 0.0049 ✔
+Mean difference = +0.058 (Pre > Post)
+task_only:
+t(52) = 1.46, p = 0.150 (not significant)
+🧠 Interpretation
+
+A significant Pre > Post effect was observed in the both condition, indicating that recognition memory is stronger for items presented before an event boundary compared to those presented after.
+
+No reliable differences were found in the item-only or task-only conditions, although the item-only condition showed a trend toward reduced performance post-boundary.
+
+🔹 Overall Interpretation
+
+These findings reveal a clear dissociation between memory processes:
+
+LDI (pattern separation) → stable across boundaries
+REC (recognition memory) → selectively affected by boundaries
+
+Specifically:
+
+Event boundaries appear to disrupt recognition for post-boundary items
+Pre-boundary items benefit from enhanced encoding or consolidation
+🔹 Comparison with Morse et al. (2023)
+
+The present findings are partially consistent with Morse et al. (2023).
+
+Similar to the original study, we observe reduced memory performance following event boundaries, reflected here as lower recognition for Post-boundary items.
+Additionally, the enhancement of Pre-boundary memory aligns with the idea that boundaries trigger segmentation processes that strengthen encoding of preceding information.
+
+However, unlike Morse et al., who reported more consistent boundary effects, the current results show that:
+
+Effects are limited to the combined (“both”) condition
+Pattern separation (LDI) remains unaffected, suggesting that boundary effects primarily influence recognition rather than fine-grained discrimination
+
