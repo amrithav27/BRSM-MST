@@ -430,6 +430,10 @@ cat("\n=========== VISUALISATION COMPLETE ===========\n")
 ```
 
 
+# NORMALITY TESTING 
+Normality tests are not performed on a single participant; they are applied to the distribution of values across participants. In this analysis, for each metric (reaction time, accuracy, hit rate, REC, LDI), we first computed a single summary value per participant (e.g., mean RT or LDI per condition), and then performed the Shapiro–Wilk test on the set of these participant-level values within each experiment. This is appropriate because the assumption of normality in statistical tests (like ANOVA or t-tests) applies to the sampling distribution across participants, not to individual trial data or a single participant’s observations.
+
+
 ```{r}
 library(tidyverse)
 
@@ -531,4 +535,293 @@ cat("\n=========== NORMALITY TEST COMPLETE ===========\n")
 
 ```
 
+# STATISTICAL METHODS 
 
+# -----------------------------------------
+# REACTION TIME ANALYSIS
+# -----------------------------------------
+
+```{r}
+
+# -------------------------------
+# 1. ADD BOUNDARY LABELS
+# -------------------------------
+task_clean <- task_clean %>%
+  mutate(
+    event_position = ((trial_number - 1) %% 7) + 1,
+    boundary = case_when(
+      event_position == 1 ~ "Post",
+      event_position == 7 ~ "Pre",
+      TRUE ~ "Non"
+    )
+  )
+
+# -------------------------------
+# 2. AGGREGATE RT PER PARTICIPANT
+# -------------------------------
+rt_summary <- task_clean %>%
+  group_by(participant_id, experiment, boundary) %>%
+  summarise(mean_rt = mean(rt, na.rm = TRUE), .groups = "drop")
+
+cat("\nRT Summary (first few rows):\n")
+print(head(rt_summary))
+
+# -------------------------------
+# 3. GROUP-LEVEL SUMMARY (LIKE PAPER)
+# -------------------------------
+rt_group <- rt_summary %>%
+  group_by(experiment, boundary) %>%
+  summarise(
+    mean_rt = mean(mean_rt),
+    sd_rt = sd(mean_rt),
+    n = n(),
+    se = sd_rt / sqrt(n),
+    .groups = "drop"
+  )
+
+cat("\nGroup-level RT summary:\n")
+print(rt_group)
+
+# -------------------------------
+# 4. VISUALIZATION (MAIN PLOT)
+# -------------------------------
+ggplot(rt_group, aes(x = boundary, y = mean_rt, fill = boundary)) +
+  geom_bar(stat = "identity", width = 0.6, alpha = 0.8) +
+  geom_errorbar(
+    aes(ymin = mean_rt - se, ymax = mean_rt + se),
+    width = 0.2,
+    size = 0.8
+  ) +
+  facet_wrap(~experiment) +
+  scale_fill_manual(values = c(
+    "Pre" = "#2E86AB",
+    "Non" = "#F6C85F",
+    "Post" = "#D1495B"
+  )) +
+  labs(
+    title = "Encoding Reaction Time by Boundary Position",
+    x = "Boundary Condition",
+    y = "Mean Reaction Time (seconds)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+# -------------------------------
+# 5. PARTICIPANT-LEVEL VISUAL (OPTIONAL, MORE INFORMATIVE)
+# -------------------------------
+ggplot(rt_summary, aes(x = boundary, y = mean_rt, fill = boundary)) +
+  geom_violin(alpha = 0.6) +
+  geom_boxplot(width = 0.2, fill = "white", outlier.color = "red") +
+  facet_wrap(~experiment) +
+  scale_fill_manual(values = c(
+    "Pre" = "#2E86AB",
+    "Non" = "#F6C85F",
+    "Post" = "#D1495B"
+  )) +
+  labs(
+    title = "Participant-Level Reaction Time Distribution",
+    x = "Boundary Condition",
+    y = "Mean Reaction Time"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+  
+```
+
+Short answer: **yes, this is broadly in line with what you should expect**, but there are two subtle things to check before you fully trust it.
+
+---
+
+# 🔷 1. Does the pattern make sense?
+
+From MST / Morse et al. logic:
+
+* **Post-boundary → slower RT** (event model updating cost)
+* **Pre-boundary → similar or slightly faster than baseline**
+* **Non-boundary → baseline**
+
+### Your plot shows:
+
+| Experiment | Pattern                |
+| ---------- | ---------------------- |
+| both       | Post > Non ≈ Pre       |
+| item_only  | very small differences |
+| task_only  | Post clearly highest   |
+
+👉 This is **exactly the qualitative pattern expected**:
+
+* Strongest boundary effect in **task_only**
+* Weakest in **item_only**
+* Moderate in **both**
+
+✔ This matches theory:
+
+* Task boundaries disrupt processing more than item boundaries
+
+---
+
+# 🔷 2. One thing to double-check (important)
+
+Your x-axis order is:
+
+```id="check1"
+Non, Post, Pre
+```
+
+But conceptually it should be:
+
+```id="check2"
+Pre → Non → Post
+```
+
+👉 Because:
+
+* Pre is *before* boundary
+* Post is *after* boundary
+
+### Fix (for interpretation clarity):
+
+```r
+rt_group$boundary <- factor(
+  rt_group$boundary,
+  levels = c("Pre", "Non", "Post")
+)
+```
+
+---
+
+# 🔷 3. Are effect sizes reasonable?
+
+From your plot:
+
+* Differences ≈ **0.1–0.3 seconds**
+* This is **realistic for RT data**
+
+If you saw:
+
+* 1+ second differences → suspicious
+* identical bars → suspicious
+
+👉 Your values look **plausible**
+
+---
+
+# 🔷 4. What would be “wrong” output?
+
+Red flags (you do NOT have these):
+
+* Pre > Post ❌
+* No difference at all ❌
+* Random pattern across experiments ❌
+
+---
+
+# 🔷 5. Interpretation you can use (report-ready)
+
+You can state:
+
+> Reaction times were highest for post-boundary items across experiments, indicating increased processing demands following event boundaries. This effect was strongest in the task-only condition and weakest in the item-only condition, consistent with the hypothesis that task boundaries induce greater cognitive disruption than item boundaries.
+
+---
+
+# 🔷 6. One improvement (optional but recommended)
+
+Add error bars (you already computed SE):
+
+👉 Without them, you can’t judge variability.
+
+---
+
+# 🔷 ✅ Final verdict
+
+✔ Direction is correct
+✔ Magnitude is reasonable
+✔ Cross-experiment pattern is meaningful
+
+👉 So yes — **this matches expectation**
+
+# REPEATED MEASURES ANOVA 
+
+The original analysis by Morse et al. used a two-way ANOVA treating boundary conditions (Pre, Non, Post) and trial type (Target/Lure) as independent factors. However, this approach implicitly assumes independence between observations across conditions. In this experiment, the same participants contribute data to all boundary conditions (Pre, Non, Post), meaning observations are not independent but repeated measures from the same individuals. Pre- and Post-boundary trials, in particular, arise from the same event transitions and reflect shared cognitive processes (event model updating). Ignoring this dependency violates ANOVA assumptions and can inflate Type I error. Therefore, a repeated-measures ANOVA is more appropriate, as it explicitly models within-subject variability and accounts for correlations between conditions. This preserves statistical validity while keeping all original metrics (RT, d′/REC, LDI) unchanged.
+
+```{r}
+cat("\n=========== REPEATED MEASURES ANOVA ANALYSIS ===========\n")
+
+# ---------------------------------------------------------
+# LOAD REQUIRED PACKAGES
+# ---------------------------------------------------------
+if (!require(afex)) {
+  install.packages("afex")
+  library(afex)
+}
+if (!require(emmeans)) {
+  install.packages("emmeans")
+  library(emmeans)
+}
+
+# ---------------------------------------------------------
+# RUN ANOVA PER EXPERIMENT + STORE RESULTS
+# ---------------------------------------------------------
+anova_results <- list()
+emm_results <- list()
+
+for(exp in unique(rt_summary$experiment)){
+  
+  cat("\n============================\n")
+  cat("Experiment:", exp, "\n")
+  
+  data_exp <- rt_summary %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "mean_rt",
+    data = data_exp,
+    within = "boundary"
+  )
+  
+  print(model)
+  
+  # Store model
+  anova_results[[exp]] <- model
+  
+  # Get estimated marginal means
+  emm <- emmeans(model, ~ boundary)
+  emm_df <- as.data.frame(emm)
+  emm_df$experiment <- exp
+  
+  emm_results[[exp]] <- emm_df
+}
+
+# Combine all experiments
+emm_all <- bind_rows(emm_results)
+
+# Order boundary correctly
+emm_all$boundary <- factor(emm_all$boundary,
+                           levels = c("Pre", "Non", "Post"))
+
+# ---------------------------------------------------------
+# PLOT: ANOVA-BASED (EMMEANS)
+# ---------------------------------------------------------
+ggplot(emm_all, aes(x = boundary, y = emmean, fill = boundary)) +
+  geom_bar(stat = "identity", width = 0.6, alpha = 0.85) +
+  geom_errorbar(
+    aes(ymin = emmean - SE, ymax = emmean + SE),
+    width = 0.2,
+    size = 0.8
+  ) +
+  facet_wrap(~experiment) +
+  scale_fill_manual(values = c(
+    "Pre" = "#2E86AB",
+    "Non" = "#F6C85F",
+    "Post" = "#D1495B"
+  )) +
+  labs(
+    title = "ANOVA-Based Estimated Marginal Means (Reaction Time)",
+    x = "Boundary Condition",
+    y = "Estimated Mean RT"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+cat("\n=========== ANOVA PLOT COMPLETE ===========\n")
+```
