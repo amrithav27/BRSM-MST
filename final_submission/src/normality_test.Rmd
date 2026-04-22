@@ -1312,3 +1312,425 @@ However, unlike Morse et al., who reported more consistent boundary effects, the
 Effects are limited to the combined (“both”) condition
 Pattern separation (LDI) remains unaffected, suggesting that boundary effects primarily influence recognition rather than fine-grained discrimination
 
+# Lure Bin Analysis
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+
+#--------------------------------------------
+# EXTRACT ID
+#--------------------------------------------
+extract_id <- function(x){
+  num <- sub(".*?(\\d+)[ab]\\.jpg$", "\\1", tolower(x))
+  as.numeric(num)
+}
+
+#--------------------------------------------
+# DETECT STIMULUS TYPE FROM PATH
+#--------------------------------------------
+get_stim_type <- function(x){
+  case_when(
+    grepl("objects", tolower(x)) ~ "object",
+    grepl("scenes", tolower(x)) ~ "scene",
+    TRUE ~ NA_character_
+  )
+}
+
+#--------------------------------------------
+# PREP TEST DATA
+#--------------------------------------------
+test_bins_all <- test_clean %>%
+  mutate(
+    item_id = extract_id(image_path),
+    stim_type = get_stim_type(image_path),
+    experiment = tolower(experiment)
+  )
+
+#--------------------------------------------
+# LOAD BIN FILES (GLOBAL, NOT PER EXP)
+#--------------------------------------------
+bins_obj <- read.table(file.path(base_path, "Both_item_task", "Set6 bins.txt"), header = FALSE) %>%
+  setNames(c("image_name", "lure_bin")) %>%
+  mutate(item_id = as.numeric(image_name),
+         stim_type = "object")
+
+bins_scn <- read.table(file.path(base_path, "Both_item_task", "SetScC bins.txt"), header = FALSE) %>%
+  setNames(c("image_name", "lure_bin")) %>%
+  mutate(item_id = as.numeric(image_name),
+         stim_type = "scene")
+
+#--------------------------------------------
+# COMBINE BIN FILES
+#--------------------------------------------
+bins_all <- bind_rows(bins_obj, bins_scn)
+
+#--------------------------------------------
+# JOIN USING BOTH ID + TYPE
+#--------------------------------------------
+test_bins <- test_bins_all %>%
+  left_join(bins_all, by = c("item_id", "stim_type"))
+
+#--------------------------------------------
+# DEBUG
+#--------------------------------------------
+cat("\nMapping success:\n")
+print(table(!is.na(test_bins$lure_bin), test_bins$experiment))
+
+#--------------------------------------------
+# FILTER LURES
+#--------------------------------------------
+lure_data <- test_bins %>%
+  filter(stimulus_type == "Lure", !is.na(lure_bin))
+
+#--------------------------------------------
+# CHECK DISTRIBUTION
+#--------------------------------------------
+cat("\nBin distribution:\n")
+print(table(lure_data$lure_bin, lure_data$experiment))
+
+#--------------------------------------------
+# COMPUTE PERFORMANCE
+#--------------------------------------------
+lure_bins <- lure_data %>%
+  group_by(participant_id, experiment, lure_bin) %>%
+  summarise(
+    p_similar = mean(response == "Similar"),
+    .groups = "drop"
+  )
+
+#--------------------------------------------
+# SUMMARY
+#--------------------------------------------
+lure_summary <- lure_bins %>%
+  group_by(experiment, lure_bin) %>%
+  summarise(
+    mean = mean(p_similar, na.rm = TRUE),
+    se = sd(p_similar, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+print(lure_summary)
+
+#--------------------------------------------
+# CLEAN LABELS
+#--------------------------------------------
+lure_summary <- lure_summary %>%
+  mutate(experiment = recode(experiment,
+    "both_item_task" = "both"
+  ))
+
+#--------------------------------------------
+# PLOT
+#--------------------------------------------
+ggplot(lure_summary, aes(x = factor(lure_bin), y = mean, fill = factor(lure_bin))) +
+  geom_bar(stat = "identity", alpha = 0.85) +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se), width = 0.2) +
+  facet_wrap(~experiment) +
+  labs(
+    title = "Lure Discrimination by Similarity Bin",
+    x = "Lure Bin (1 = most similar, 5 = least)",
+    y = "P(Similar Response)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+```
+
+```{r}
+library(afex)
+
+cat("\n===== LURE BIN ANOVA =====\n")
+
+for(exp in unique(lure_bins$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- lure_bins %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "p_similar",
+    data = data_exp,
+    within = "lure_bin"
+  )
+  
+  print(model)
+}
+
+library(emmeans)
+
+for(exp in unique(lure_bins$experiment)){
+  
+  cat("\nPost-hoc:", exp, "\n")
+  
+  data_exp <- lure_bins %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "p_similar",
+    data = data_exp,
+    within = "lure_bin"
+  )
+  
+  emm <- emmeans(model, ~ lure_bin)
+  print(pairs(emm, adjust = "bonferroni"))
+}
+
+ggplot(lure_summary, aes(x = lure_bin, y = mean, color = experiment, group = experiment)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(
+    aes(ymin = mean - se, ymax = mean + se),
+    width = 0.15,
+    size = 0.8
+  ) +
+  scale_x_continuous(breaks = 1:5) +
+  labs(
+    title = "Effect of Lure Similarity on Memory Performance",
+    x = "Lure Bin (1 = most similar, 5 = least similar)",
+    y = "P(Similar Response)",
+    color = "Experiment"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+📄 Lure Bin Analysis
+Method
+
+Lure stimuli were grouped into five similarity bins (1 = most similar, 5 = least similar). For each participant, the probability of responding “Similar” was computed for each bin. A repeated-measures ANOVA was conducted separately for each experimental condition (item_only, both, task_only) to examine the effect of similarity on lure discrimination. Post-hoc pairwise comparisons were performed using Bonferroni correction.
+
+📄 Results
+
+A significant main effect of lure similarity was observed in all three conditions:
+
+item_only: F(3.79, 208.62) = 17.35, p < .001, ges = .112
+both: F(3.59, 179.41) = 9.81, p < .001, ges = .069
+task_only: F(3.80, 193.92) = 6.96, p < .001, ges = .067
+
+These results indicate that lure discrimination performance varied significantly across similarity levels.
+
+Post-hoc comparisons revealed that, in all conditions, the most similar lures (Bin 1) were significantly harder to discriminate than less similar lures:
+
+In item_only, Bin 1 differed significantly from all other bins (p < .001), while differences among higher bins were not significant.
+In both, Bin 1 differed significantly from Bins 4 and 5 (p < .001), with weaker or marginal differences for intermediate bins.
+In task_only, Bin 1 differed significantly from Bins 4 and 5 (p < .01), with additional differences emerging between intermediate and higher bins.
+📄 Interpretation
+
+These findings demonstrate a clear similarity-dependent gradient in memory performance, where highly similar lures are more difficult to discriminate than less similar ones. This pattern is consistent with pattern separation mechanisms, in which overlapping representations lead to increased confusion between targets and similar lures.
+
+The effect size was largest in the item_only condition (ges = .112), suggesting stronger sensitivity to similarity differences when stimuli are processed in isolation. The both and task_only conditions showed smaller but still significant effects, indicating that additional task demands or contextual processing may reduce—but not eliminate—the influence of stimulus similarity.
+
+While Morse et al. (2023) primarily investigated the influence of event boundaries on memory, the present lure bin analysis extends these findings by showing that memory performance is also systematically modulated by stimulus similarity. Specifically, discrimination improves as perceptual similarity decreases, supporting accounts of hippocampal pattern separation operating alongside event segmentation processes.
+
+# Quartile Analysis
+
+```{r}
+library(dplyr)
+library(afex)
+library(ggplot2)
+
+cat("\n=========== QUARTILE ANALYSIS (ENCODING → LDI/REC) ===========\n")
+
+#--------------------------------------------------
+# ROBUST ID EXTRACTION
+#--------------------------------------------------
+extract_id <- function(x){
+  x <- tolower(x)
+  num <- sub(".*?(\\d+)[ab]?\\.jpg$", "\\1", x)
+  as.numeric(num)
+}
+
+#--------------------------------------------------
+# STEP 1: ENCODING DATA → ADD QUARTILES
+#--------------------------------------------------
+task_q <- task_all %>%
+  mutate(
+    experiment = tolower(experiment),
+    item_id = extract_id(image_name)
+  ) %>%
+  group_by(participant_id, experiment) %>%
+  mutate(
+    quartile = ntile(trial_number, 4)
+  ) %>%
+  ungroup()
+
+#--------------------------------------------------
+# STEP 2: TEST DATA
+#--------------------------------------------------
+test_q <- test_clean %>%
+  mutate(
+    experiment = tolower(experiment),
+    item_id = extract_id(image_name)
+  )
+
+#--------------------------------------------------
+# STEP 3: MAP ENCODING → TEST
+#--------------------------------------------------
+test_with_q <- test_q %>%
+  left_join(
+    task_q %>%
+      select(participant_id, experiment, item_id, quartile),
+    by = c("participant_id", "experiment", "item_id"),
+    relationship = "many-to-many"
+  )
+
+#--------------------------------------------------
+# 🔥 CRITICAL FIX: REMOVE NA QUARTILES
+# (removes foils + unmatched items)
+#--------------------------------------------------
+test_with_q <- test_with_q %>%
+  filter(!is.na(quartile))
+
+#--------------------------------------------------
+# DEBUG CHECK
+#--------------------------------------------------
+cat("\nQuartile distribution after cleaning:\n")
+print(table(test_with_q$quartile))
+
+#--------------------------------------------------
+# STEP 4: COMPUTE LDI & REC PER QUARTILE
+#--------------------------------------------------
+mst_quartile <- test_with_q %>%
+  group_by(participant_id, experiment, quartile) %>%
+  summarise(
+    p_old_target = mean(stimulus_type == "Target" & response == "Old"),
+    p_old_foil   = mean(stimulus_type == "Foil" & response == "Old"),
+    
+    p_sim_lure   = mean(stimulus_type == "Lure" & response == "Similar"),
+    p_sim_foil   = mean(stimulus_type == "Foil" & response == "Similar"),
+    
+    .groups = "drop"
+  ) %>%
+  mutate(
+    REC = p_old_target - p_old_foil,
+    LDI = p_sim_lure - p_sim_foil
+  )
+
+cat("\nSample MST quartile data:\n")
+print(head(mst_quartile))
+
+#--------------------------------------------------
+# STEP 5: ANOVA - LDI
+#--------------------------------------------------
+cat("\n===== QUARTILE ANOVA: LDI =====\n")
+
+for(exp in unique(mst_quartile$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_quartile %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "LDI",
+    data = data_exp,
+    within = "quartile"
+  )
+  
+  print(model)
+}
+
+#--------------------------------------------------
+# STEP 6: ANOVA - REC
+#--------------------------------------------------
+cat("\n===== QUARTILE ANOVA: REC =====\n")
+
+for(exp in unique(mst_quartile$experiment)){
+  
+  cat("\nExperiment:", exp, "\n")
+  
+  data_exp <- mst_quartile %>% filter(experiment == exp)
+  
+  model <- aov_ez(
+    id = "participant_id",
+    dv = "REC",
+    data = data_exp,
+    within = "quartile"
+  )
+  
+  print(model)
+}
+
+#--------------------------------------------------
+# STEP 7: SUMMARY FOR PLOTS
+#--------------------------------------------------
+mst_q_summary <- mst_quartile %>%
+  group_by(experiment, quartile) %>%
+  summarise(
+    mean_LDI = mean(LDI, na.rm = TRUE),
+    se_LDI = sd(LDI, na.rm = TRUE)/sqrt(n()),
+    mean_REC = mean(REC, na.rm = TRUE),
+    se_REC = sd(REC, na.rm = TRUE)/sqrt(n()),
+    .groups = "drop"
+  )
+
+# Clean labels
+mst_q_summary <- mst_q_summary %>%
+  mutate(experiment = recode(experiment,
+    "both_item_task" = "both"
+  ))
+
+#--------------------------------------------------
+# STEP 8: PLOT LDI
+#--------------------------------------------------
+ggplot(mst_q_summary, aes(x = quartile, y = mean_LDI, color = experiment)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(
+    aes(ymin = mean_LDI - se_LDI, ymax = mean_LDI + se_LDI),
+    width = 0.1
+  ) +
+  scale_x_continuous(breaks = 1:4) +
+  labs(
+    title = "LDI as a Function of Encoding Quartile",
+    x = "Encoding Quartile",
+    y = "LDI"
+  ) +
+  theme_minimal(base_size = 14)
+
+#--------------------------------------------------
+# STEP 9: PLOT REC
+#--------------------------------------------------
+ggplot(mst_q_summary, aes(x = quartile, y = mean_REC, color = experiment)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(
+    aes(ymin = mean_REC - se_REC, ymax = mean_REC + se_REC),
+    width = 0.1
+  ) +
+  scale_x_continuous(breaks = 1:4) +
+  labs(
+    title = "REC as a Function of Encoding Quartile",
+    x = "Encoding Quartile",
+    y = "REC"
+  ) +
+  theme_minimal(base_size = 14)
+
+cat("\n=========== QUARTILE ANALYSIS COMPLETE ===========\n")
+```
+
+Method
+
+To examine whether memory performance was influenced by temporal factors during encoding, encoding trials were divided into four quartiles based on trial order within each participant. Test items were then grouped according to the quartile in which they were originally encountered during encoding. Lure Discrimination Index (LDI) and Recognition (REC) scores were computed separately for each quartile. Repeated-measures ANOVAs were conducted for each experimental condition to assess the effect of encoding position.
+
+Results
+
+There was no significant effect of encoding quartile on either LDI or REC in any of the experimental conditions.
+
+LDI
+item_only: F(2.75, 151.43) = 1.25, p = .293, ges = .009
+both: F(2.82, 140.93) = 0.38, p = .756, ges = .003
+task_only: F(2.95, 153.23) = 0.24, p = .865, ges = .002
+REC
+item_only: F(2.87, 157.92) = 0.25, p = .851, ges = .002
+both: F(2.93, 146.68) = 1.70, p = .170, ges = .012
+task_only: F(2.64, 137.35) = 1.25, p = .294, ges = .012
+
+Across all conditions, effect sizes were very small and no quartile-related trends were observed.
+
+Interpretation
+
+The absence of any significant quartile effects indicates that memory performance (both recognition and lure discrimination) remained stable across the encoding phase. This suggests that participants’ performance was not influenced by temporal factors such as practice effects, fatigue, or increasing predictability of block transitions.
+
+Importantly, this finding strengthens the validity of earlier results by ruling out a key confound: if participants were simply learning when boundaries occur, performance would vary across early and late encoding trials. However, no such pattern was observed.
