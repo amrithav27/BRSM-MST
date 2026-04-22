@@ -10,6 +10,9 @@ output:
     latex_engine: xelatex
   
 ---
+```{r}
+knitr::opts_chunk$set(cache = FALSE)
+```
 # So we have three tasks in the MST_Data folder 
 ├── Both_item_task/
 │   └── both_data/                # Data files for Experiment 1
@@ -33,7 +36,7 @@ where the subject ID uniquely identifies each participant and the phase indicate
 
 The task files primarily contain information related to stimulus presentation and encoding responses, including image paths, trial indices, and key responses recorded during the study phase.
 
-The test files contain trial-level behavioral data used for analysis, including:
+The test files contain trial-level behavioral data used for analysis, including: 
 
 stimulus identity (e.g., scene or object images)
 stimulus condition (e.g., target, lure, foil — inferred from stimulus position/type)
@@ -47,5 +50,485 @@ REC (Recognition Score), reflecting general recognition performance
 Reaction Time (RT), capturing response latency
 
 The dataset is structured such that each participant contributes multiple trials, enabling within-subject analysis of memory performance across different stimulus types.
+
+Experiment	Condition:
+1	Both (item + task boundary)
+2	Item-only
+3	Task-only
+# Preprocessing 
+
+```{r}
+
+library(tidyverse)
+
+base_path <- "../MST_Data"
+
+clean_task_file <- function(file_path) {
+  
+  cat("\n=============================\n")
+  cat("Processing:", basename(file_path), "\n")
+  
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  
+  cat("Initial rows:", nrow(df), "\n")
+  
+  # -------------------------------
+  # Extract participant ID
+  # -------------------------------
+  participant_id <- str_extract(basename(file_path), "^\\d{5}")
+  
+  # -------------------------------
+  # Ensure required columns exist
+  # -------------------------------
+  required_cols <- c("image_path", "trials.thisN")
+  
+  missing_cols <- setdiff(required_cols, names(df))
+  
+  if(length(missing_cols) > 0){
+    stop(paste("Missing columns:", paste(missing_cols, collapse=", ")))
+  }
+  
+  # -------------------------------
+  # Create RT columns if missing
+  # -------------------------------
+  if(!"trials.key_resp_9.rt" %in% names(df)) df$trials.key_resp_9.rt <- NA
+  if(!"trials.key_resp_8.rt" %in% names(df)) df$trials.key_resp_8.rt <- NA
+  
+  # -------------------------------
+  # CLEAN
+  # -------------------------------
+  df_clean <- df %>%
+    
+    # remove non-trial rows
+    filter(!is.na(trials.thisN)) %>%
+    
+    # remove empty image rows
+    filter(!is.na(image_path), image_path != "") %>%
+    
+    # remove practice
+    filter(!str_detect(image_path, "practice")) %>%
+    
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+      
+      # numeric safety
+      rt_9 = suppressWarnings(as.numeric(trials.key_resp_9.rt)),
+      rt_8 = suppressWarnings(as.numeric(trials.key_resp_8.rt)),
+      
+      # RT correction
+      rt = case_when(
+        !is.na(rt_9) ~ rt_9,
+        !is.na(rt_8) ~ 3 + rt_8,
+        TRUE ~ NA_real_
+      ),
+      
+      image_name = basename(image_path)
+    ) %>%
+    
+    select(participant_id, trial_number, image_path, image_name, rt)
+  
+  # -------------------------------
+  # DEBUG PRINTS
+  # -------------------------------
+  cat("Rows after cleaning:", nrow(df_clean), "\n")
+  cat("Unique images:", length(unique(df_clean$image_name)), "\n")
+  cat("RT summary:\n")
+  print(summary(df_clean$rt))
+  
+  return(df_clean)
+}
+
+# TEST PREPROCESSER
+clean_test_file <- function(file_path) {
+  
+  cat("\n=============================\n")
+  cat("Processing TEST:", basename(file_path), "\n")
+  
+  df <- suppressMessages(
+    read_csv(file_path, show_col_types = FALSE, name_repair = "unique")
+  )
+  
+  participant_id <- str_extract(basename(file_path), "^\\d{5}")
+  
+  df_clean <- df %>%
+    
+    filter(!is.na(trials.thisN)) %>%
+    
+    filter(!is.na(image_path), image_path != "") %>%
+    
+    mutate(
+      participant_id = participant_id,
+      trial_number = trials.thisN + 1,
+      image_name = basename(image_path),
+      
+      # classify stimulus
+      stimulus_type = case_when(
+        str_detect(tolower(image_path), "^foil") ~ "Foil",
+        str_detect(image_name, "b\\.jpg$") ~ "Lure",
+        str_detect(image_name, "a\\.jpg$") ~ "Target",
+        TRUE ~ NA_character_
+      ),
+      
+      # response mapping
+      response = case_when(
+        trials.key_resp_3.keys == "o" ~ "Old",
+        trials.key_resp_3.keys == "s" ~ "Similar",
+        trials.key_resp_3.keys == "n" ~ "New",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    
+    select(participant_id, trial_number, image_path, image_name, stimulus_type, response)
+  
+  # DEBUG
+  cat("Rows:", nrow(df_clean), "\n")
+  cat("Stimulus counts:\n")
+  print(table(df_clean$stimulus_type))
+  
+  return(df_clean)
+}
+
+# LOAD ALL EXPEERIMENTS
+
+load_experiment <- function(task_dir, test_dir, label) {
+  
+  cat("\n=============================\n")
+  cat("LOADING EXPERIMENT:", label, "\n")
+  
+  task_files <- list.files(task_dir, pattern = "task.*\\.csv$", full.names = TRUE)
+  test_files <- list.files(test_dir, pattern = "test.*\\.csv$", full.names = TRUE)
+  
+  cat("Task files:", length(task_files), "\n")
+  cat("Test files:", length(test_files), "\n")
+  
+  task_data <- map_dfr(task_files, clean_task_file)
+  test_data <- map_dfr(test_files, clean_test_file)
+  
+  task_data$experiment <- label
+  test_data$experiment <- label
+  
+  return(list(task = task_data, test = test_data))
+}
+
+# RUN PREPROCESSING FOR ALL THREE EXPERIMENTS 
+
+exp1 <- load_experiment(
+  "../MST_Data/Both_item_task/both_data",
+  "../MST_Data/Both_item_task/both_data",
+  "both"
+)
+
+exp2 <- load_experiment(
+  "../MST_Data/item_only/item_only_data",
+  "../MST_Data/item_only/item_only_data",
+  "item_only"
+)
+
+exp3 <- load_experiment(
+  "../MST_Data/task_only/task_only_data",
+  "../MST_Data/task_only/task_only_data",
+  "task_only"
+)
+
+# Combine
+task_all <- bind_rows(exp1$task, exp2$task, exp3$task)
+test_all <- bind_rows(exp1$test, exp2$test, exp3$test)
+
+cat("\nFINAL DATA SUMMARY\n")
+cat("Total task rows:", nrow(task_all), "\n")
+cat("Total test rows:", nrow(test_all), "\n")
+
+# SANITY CHECK 
+head(task_all)
+summary(task_all$rt)
+table(test_all$stimulus_type)
+```
+
+# VISUALISATION 
+HOW TO USE THESE (IMPORTANT)
+Check these before moving forward:
+✅ Reaction Time
+Right skew? → expected
+Extreme outliers? → consider trimming/log transform
+✅ Response Distribution
+Balanced responses?
+Too many “Old”? → bias issue
+✅ Stimulus Types
+Should roughly match:
+✅ Accuracy / Hit Rate
+Should be above chance (~0.5)
+If not → data quality issue
+✅ LDI / REC
+Should be > 0 (as per MST theory)
+
+
+```{r}
+cat("\n================ VISUALIZATION PIPELINE ================\n")
+
+
+# ---------------------------------------------------------
+# 1. FIX STIMULUS CLASSIFICATION (IMPORTANT FIX)
+# ---------------------------------------------------------
+test_all_fixed <- test_all %>%
+  mutate(
+    stimulus_type = case_when(
+      str_detect(tolower(image_path), "^foil") ~ "Foil",
+      str_detect(image_name, "a\\.jpg$") ~ "Target",
+      str_detect(image_name, "b\\.jpg$") ~ "Lure",
+      TRUE ~ NA_character_
+    )
+  )
+
+cat("\nStimulus distribution AFTER FIX:\n")
+print(table(test_all_fixed$stimulus_type, useNA = "always"))
+
+# ---------------------------------------------------------
+# 2. CLEAN DATA (REMOVE INVALID)
+# ---------------------------------------------------------
+task_clean <- task_all %>%
+  filter(!is.na(rt), is.finite(rt))
+
+test_clean <- test_all_fixed %>%
+  filter(!is.na(stimulus_type))
+
+# ---------------------------------------------------------
+# Custom Color Palette
+# ---------------------------------------------------------
+palette_main <- c(
+  "Target" = "#2E86AB",
+  "Lure"   = "#F18F01",
+  "Foil"   = "#C73E1D"
+)
+
+palette_resp <- c(
+  "Old" = "#1B998B",
+  "Similar" = "#ED217C",
+  "New" = "#2D3047"
+)
+
+# ---------------------------------------------------------
+# 3. REACTION TIME DISTRIBUTION
+# ---------------------------------------------------------
+ggplot(task_clean, aes(x = rt, fill = experiment)) +
+  geom_histogram(bins = 50, alpha = 0.6, color = "black") +
+  geom_density(aes(color = experiment), linewidth = 1) +
+  facet_wrap(~experiment) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Set2") +
+  labs(title = "Reaction Time Distribution", x = "RT", y = "Count") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 4. RT BOXPLOT
+# ---------------------------------------------------------
+ggplot(task_clean, aes(x = experiment, y = rt, fill = experiment)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red") +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "RT by Experiment") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 5. STIMULUS TYPE DISTRIBUTION (FIXED)
+# ---------------------------------------------------------
+ggplot(test_clean, aes(x = stimulus_type, fill = stimulus_type)) +
+  geom_bar(alpha = 0.85) +
+  facet_wrap(~experiment) +
+  scale_fill_manual(values = palette_main) +
+  labs(title = "Stimulus Type Distribution") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 6. RESPONSE DISTRIBUTION
+# ---------------------------------------------------------
+ggplot(test_clean, aes(x = response, fill = response)) +
+  geom_bar(alpha = 0.85) +
+  facet_wrap(~experiment) +
+  scale_fill_manual(values = palette_resp) +
+  labs(title = "Response Distribution") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 7. ACCURACY
+# ---------------------------------------------------------
+acc_data <- test_clean %>%
+  mutate(correct = case_when(
+    stimulus_type == "Target" & response == "Old" ~ 1,
+    stimulus_type == "Lure" & response == "Similar" ~ 1,
+    stimulus_type == "Foil" & response == "New" ~ 1,
+    TRUE ~ 0
+  )) %>%
+  group_by(participant_id, experiment) %>%
+  summarise(accuracy = mean(correct), .groups = "drop")
+
+ggplot(acc_data, aes(x = accuracy, fill = experiment)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~experiment) +
+  scale_fill_brewer(palette = "Pastel1") +
+  labs(title = "Accuracy Distribution") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 8. HIT RATE
+# ---------------------------------------------------------
+hit_data <- test_clean %>%
+  filter(stimulus_type == "Target") %>%
+  mutate(hit = ifelse(response == "Old", 1, 0)) %>%
+  group_by(participant_id, experiment) %>%
+  summarise(hit_rate = mean(hit), .groups = "drop")
+
+ggplot(hit_data, aes(x = hit_rate, fill = experiment)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~experiment) +
+  scale_fill_brewer(palette = "Accent") +
+  labs(title = "Hit Rate Distribution") +
+  theme_minimal(base_size = 14)
+
+# ---------------------------------------------------------
+# 9. LDI & REC (SAFE COMPUTATION)
+# ---------------------------------------------------------
+safe_mean <- function(x){
+  if(length(x) == 0) return(NA_real_)
+  mean(x, na.rm = TRUE)
+}
+
+mst_metrics <- test_clean %>%
+  group_by(participant_id, experiment) %>%
+  summarise(
+    p_old_target = safe_mean(stimulus_type == "Target" & response == "Old"),
+    p_old_foil   = safe_mean(stimulus_type == "Foil" & response == "Old"),
+    p_sim_lure   = safe_mean(stimulus_type == "Lure" & response == "Similar"),
+    p_sim_foil   = safe_mean(stimulus_type == "Foil" & response == "Similar"),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    REC = p_old_target - p_old_foil,
+    LDI = p_sim_lure - p_sim_foil
+  ) %>%
+  filter(!is.na(REC), !is.na(LDI))
+
+# REC
+ggplot(mst_metrics, aes(x = REC, fill = experiment)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~experiment) +
+  scale_fill_brewer(palette = "Dark2") +
+  labs(title = "REC Distribution") +
+  theme_minimal(base_size = 14)
+
+# LDI
+ggplot(mst_metrics, aes(x = LDI, fill = experiment)) +
+  geom_histogram(bins = 30, alpha = 0.7, color = "black") +
+  facet_wrap(~experiment) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(title = "LDI Distribution") +
+  theme_minimal(base_size = 14)
+
+cat("\n=========== VISUALISATION COMPLETE ===========\n")
+
+```
+
+
+```{r}
+library(tidyverse)
+
+cat("\n=========== NORMALITY TEST PIPELINE ===========\n")
+
+# ---------------------------------------------------------
+# HELPER FUNCTION
+# ---------------------------------------------------------
+run_normality <- function(values, label, exp){
+  
+  values <- values[!is.na(values)]
+  
+  cat("\n------------------------------\n")
+  cat("Experiment:", exp, "\n")
+  cat("Variable:", label, "\n")
+  cat("Sample size:", length(values), "\n")
+  
+  if(length(values) < 3){
+    cat("Not enough data\n")
+    return(NULL)
+  }
+  
+  print(shapiro.test(values))
+  
+  qqnorm(values, main = paste(label, "-", exp))
+  qqline(values, col = "red")
+}
+
+# ---------------------------------------------------------
+# LOOP OVER EXPERIMENTS
+# ---------------------------------------------------------
+for(exp in unique(test_clean$experiment)){
+  
+  cat("\n====================================\n")
+  cat("PROCESSING:", exp, "\n")
+  cat("====================================\n")
+  
+  task_exp <- task_clean %>% filter(experiment == exp)
+  test_exp <- test_clean %>% filter(experiment == exp)
+  
+  # ---------------------------
+  # RT
+  # ---------------------------
+  rt_summary <- task_exp %>%
+    group_by(participant_id) %>%
+    summarise(mean_rt = mean(rt), .groups = "drop")
+  
+  run_normality(rt_summary$mean_rt, "Reaction Time", exp)
+  
+  # ---------------------------
+  # Accuracy
+  # ---------------------------
+  acc_summary <- test_exp %>%
+    mutate(correct = case_when(
+      stimulus_type == "Target" & response == "Old" ~ 1,
+      stimulus_type == "Lure" & response == "Similar" ~ 1,
+      stimulus_type == "Foil" & response == "New" ~ 1,
+      TRUE ~ 0
+    )) %>%
+    group_by(participant_id) %>%
+    summarise(accuracy = mean(correct), .groups = "drop")
+  
+  run_normality(acc_summary$accuracy, "Accuracy", exp)
+  
+  # ---------------------------
+  # Hit Rate
+  # ---------------------------
+  hit_summary <- test_exp %>%
+    filter(stimulus_type == "Target") %>%
+    mutate(hit = ifelse(response == "Old", 1, 0)) %>%
+    group_by(participant_id) %>%
+    summarise(hit_rate = mean(hit), .groups = "drop")
+  
+  run_normality(hit_summary$hit_rate, "Hit Rate", exp)
+  
+  # ---------------------------
+  # LDI & REC
+  # ---------------------------
+  mst_metrics <- test_exp %>%
+    group_by(participant_id) %>%
+    summarise(
+      p_old_target = mean(stimulus_type == "Target" & response == "Old"),
+      p_old_foil   = mean(stimulus_type == "Foil" & response == "Old"),
+      p_sim_lure   = mean(stimulus_type == "Lure" & response == "Similar"),
+      p_sim_foil   = mean(stimulus_type == "Foil" & response == "Similar"),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      REC = p_old_target - p_old_foil,
+      LDI = p_sim_lure - p_sim_foil
+    ) %>%
+    filter(!is.na(REC), !is.na(LDI))
+  
+  run_normality(mst_metrics$REC, "REC", exp)
+  run_normality(mst_metrics$LDI, "LDI", exp)
+}
+
+cat("\n=========== NORMALITY TEST COMPLETE ===========\n")
+
+```
 
 
